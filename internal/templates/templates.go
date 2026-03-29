@@ -22,7 +22,33 @@ type TemplateData struct {
 	OutputDir string
 }
 
+// Render renders a template by name with the given data.
+// For soul.md.tmpl and user.md.tmpl, it checks for a role-specific variant
+// (e.g. soul.coding.md.tmpl) and uses it if present, falling back to the default.
 func Render(name string, data TemplateData) (string, error) {
+	resolved := resolveTemplateName(name, data.AgentRole)
+	return renderTemplate(resolved, data)
+}
+
+// resolveTemplateName returns a role-specific template name if one exists for the
+// given base name and role, otherwise returns the original name unchanged.
+func resolveTemplateName(name, role string) string {
+	if role == "" {
+		return name
+	}
+	// Only attempt role lookup for the two primary templates.
+	if name != "soul.md.tmpl" && name != "user.md.tmpl" {
+		return name
+	}
+	base := strings.TrimSuffix(name, ".md.tmpl") // "soul" or "user"
+	candidate := fmt.Sprintf("%s.%s.md.tmpl", base, role)
+	if _, err := filesFS.Open("files/" + candidate); err == nil {
+		return candidate
+	}
+	return name
+}
+
+func renderTemplate(name string, data TemplateData) (string, error) {
 	path := fmt.Sprintf("files/%s", name)
 	content, err := filesFS.ReadFile(path)
 	if err != nil {

@@ -58,6 +58,48 @@ func TestHelpers(t *testing.T) {
 	}
 }
 
+func TestScanDirStow(t *testing.T) {
+	dir := t.TempDir()
+
+	// Stow-style: nvim/init.lua, tmux/tmux.conf, zsh/.zshrc, ghostty/config
+	mustWrite(t, filepath.Join(dir, "nvim", "init.lua"), "-- neovim config\n")
+	mustWrite(t, filepath.Join(dir, "tmux", "tmux.conf"), "set -g mouse on\n")
+	mustWrite(t, filepath.Join(dir, "zsh", ".zshrc"), "export EDITOR=nvim\nalias ll='ls -la'\n")
+	mustWrite(t, filepath.Join(dir, "ghostty", "config"), "font-size = 14\n")
+	mustWrite(t, filepath.Join(dir, "starship", "starship.toml"), "")
+	os.MkdirAll(filepath.Join(dir, "yazi"), 0o755)
+	os.MkdirAll(filepath.Join(dir, "aerospace"), 0o755)
+
+	info, err := scanDir(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.Editor.Editor != "neovim" {
+		t.Fatalf("expected neovim editor, got %q", info.Editor.Editor)
+	}
+	if !slices.Contains(info.Tools, "tmux") {
+		t.Fatalf("expected tmux in tools: %v", info.Tools)
+	}
+	if !slices.Contains(info.Tools, "ghostty") {
+		t.Fatalf("expected ghostty in tools: %v", info.Tools)
+	}
+	if !slices.Contains(info.Tools, "starship") {
+		t.Fatalf("expected starship in tools: %v", info.Tools)
+	}
+	if !slices.Contains(info.Tools, "yazi") {
+		t.Fatalf("expected yazi in tools: %v", info.Tools)
+	}
+	if !slices.Contains(info.Tools, "aerospace") {
+		t.Fatalf("expected aerospace in tools: %v", info.Tools)
+	}
+	if !slices.Contains(info.Aliases, "ll") {
+		t.Fatalf("expected alias ll: %v", info.Aliases)
+	}
+	if len(info.RawFiles) == 0 {
+		t.Fatal("expected raw_files to be populated")
+	}
+}
+
 func mustWrite(t *testing.T, path, content string) {
 	t.Helper()
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {

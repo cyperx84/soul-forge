@@ -2,6 +2,7 @@ package dotfiles
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -53,67 +54,154 @@ func Scan(repo string) (*Info, error) {
 	return scanDir(tmpDir)
 }
 
+// scanDir walks the entire repo tree, detecting config files regardless of depth.
+// It handles both root-level dotfiles and stow-style subdirectory layouts
+// (e.g. nvim/init.lua, zsh/.zshrc, tmux/tmux.conf).
 func scanDir(dir string) (*Info, error) {
 	info := &Info{}
 
-	shellFiles := []string{".zshrc", ".bashrc", ".bash_profile", ".profile", ".zprofile", ".zshenv", ".config/zsh/.zshrc"}
-	for _, f := range shellFiles {
-		path := filepath.Join(dir, f)
-		if data, err := os.ReadFile(path); err == nil {
-			info.RawFiles = append(info.RawFiles, f)
-			parseShellConfig(string(data), info)
-		}
+	shellFileNames := map[string]bool{
+		".zshrc": true, ".bashrc": true, ".bash_profile": true,
+		".profile": true, ".zprofile": true, ".zshenv": true,
 	}
 
-	editorFiles := []string{".vimrc", ".config/nvim/init.lua", ".config/nvim/init.vim", ".config/nvim", ".config/helix/config.toml"}
-	for _, f := range editorFiles {
-		path := filepath.Join(dir, f)
-		if _, err := os.Stat(path); err == nil {
-			info.RawFiles = append(info.RawFiles, f)
-			detectEditor(f, info)
-		}
+	// Tool directories: stow-style top-level dirs (e.g. tmux/, ghostty/)
+	toolDirNames := map[string]string{
+		"kitty":     "kitty",
+		"alacritty": "alacritty",
+		"wezterm":   "wezterm",
+		"tmux":      "tmux",
+		"ghostty":   "ghostty",
+		"yazi":      "yazi",
+		"kanata":    "kanata",
+		"aerospace": "aerospace",
 	}
 
-	vscodePaths := []string{
-		".config/Code/User/settings.json",
-		"Library/Application Support/Code/User/settings.json",
+	// Tool files: detected by exact filename anywhere in tree
+	toolFileNames := map[string]string{
+		".tmux.conf":      "tmux",
+		"tmux.conf":       "tmux",
+		".tool-versions":  "asdf",
+		".mise.toml":      "mise",
+		"Brewfile":        "homebrew",
+		"aerospace.toml":  "aerospace",
 	}
-	for _, f := range vscodePaths {
-		path := filepath.Join(dir, f)
-		if _, err := os.Stat(path); err == nil {
-			info.RawFiles = append(info.RawFiles, f)
+
+	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return nil // skip unreadable entries
+		}
+
+		if d.IsDir() {
+			if d.Name() == ".git" {
+				return filepath.SkipDir
+			}
+			// Detect tools from stow-style directory names
+			if tool, ok := toolDirNames[d.Name()]; ok {
+				addUnique(&info.Tools, tool)
+			}
+			// Detect editor from directory names (nvim/, helix/)
+			switch d.Name() {
+			case "nvim":
+				if info.Editor.Editor == "" {
+					info.Editor.Editor = "neovim"
+				}
+			case "helix":
+				if info.Editor.Editor == "" {
+					info.Editor.Editor = "helix"
+				}
+			}
+			return nil
+		}
+
+		rel, _ := filepath.Rel(dir, path)
+		name := d.Name()
+
+		// Shell config files — parse for plugins, aliases, env vars
+		if shellFileNames[name] {
+			if info.Shell.Shell == "" {
+				switch name {
+				case ".zshrc", ".zprofile", ".zshenv":
+					info.Shell.Shell = "zsh"
+				case ".bashrc", ".bash_profile":
+					info.Shell.Shell = "bash"
+				}
+			}
+			info.RawFiles = append(info.RawFiles, rel)
+			if data, err := os.ReadFile(path); err == nil {
+				parseShellConfig(string(data), info)
+			}
+			return nil
+		}
+
+		// Git config
+		if name == ".gitconfig" {
+			info.RawFiles = append(info.RawFiles, rel)
+			if data, err := os.ReadFile(path); err == nil {
+				parseGitConfig(string(data), info)
+			}
+			return nil
+		}
+
+		// Editor config files
+		if isEditorFile(rel, name) {
+			info.RawFiles = append(info.RawFiles, rel)
+			detectEditor(rel, info)
+			return nil
+		}
+
+		// VSCode settings
+		if name == "settings.json" && strings.Contains(rel, "Code") && strings.Contains(rel, "User") {
+			info.RawFiles = append(info.RawFiles, rel)
 			if info.Editor.Editor == "" {
 				info.Editor.Editor = "vscode"
 			}
+			return nil
 		}
-	}
 
-	gitconfig := filepath.Join(dir, ".gitconfig")
-	if data, err := os.ReadFile(gitconfig); err == nil {
-		info.RawFiles = append(info.RawFiles, ".gitconfig")
-		parseGitConfig(string(data), info)
-	}
-
-	toolFiles := map[string]string{
-		".tmux.conf":             "tmux",
-		".config/tmux/tmux.conf": "tmux",
-		".config/alacritty":      "alacritty",
-		".config/kitty":          "kitty",
-		".config/wezterm":        "wezterm",
-		".tool-versions":         "asdf",
-		".mise.toml":             "mise",
-		"Brewfile":               "homebrew",
-		".config/starship.toml":  "starship",
-	}
-	for file, tool := range toolFiles {
-		path := filepath.Join(dir, file)
-		if _, err := os.Stat(path); err == nil {
-			info.RawFiles = append(info.RawFiles, file)
-			info.Tools = append(info.Tools, tool)
+		// Starship config — sets prompt in addition to tool detection
+		if name == "starship.toml" {
+			info.RawFiles = append(info.RawFiles, rel)
+			if info.Shell.Prompt == "" {
+				info.Shell.Prompt = "starship"
+			}
+			addUnique(&info.Tools, "starship")
+			return nil
 		}
-	}
 
-	return info, nil
+		// Ghostty config file (named "config" inside a ghostty path)
+		if name == "config" && strings.Contains(strings.ToLower(rel), "ghostty") {
+			info.RawFiles = append(info.RawFiles, rel)
+			addUnique(&info.Tools, "ghostty")
+			return nil
+		}
+
+		// Tool files by exact filename
+		if tool, ok := toolFileNames[name]; ok {
+			info.RawFiles = append(info.RawFiles, rel)
+			addUnique(&info.Tools, tool)
+			return nil
+		}
+
+		return nil
+	})
+
+	return info, err
+}
+
+// isEditorFile returns true for known editor config filenames at the expected paths.
+func isEditorFile(rel, name string) bool {
+	relLower := strings.ToLower(rel)
+	if (name == "init.lua" || name == "init.vim") && strings.Contains(relLower, "nvim") {
+		return true
+	}
+	if name == ".vimrc" {
+		return true
+	}
+	if name == "config.toml" && strings.Contains(relLower, "helix") {
+		return true
+	}
+	return false
 }
 
 func parseShellConfig(content string, info *Info) {
