@@ -1,0 +1,10 @@
+# Compiled binary
+soul-forge
+soul-forge.exe
+
+# soul-forge runtime directory
+.soul-forge/
+
+# OS / editor
+.DS_Store
+*.swp
