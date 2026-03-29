@@ -34,4 +34,5 @@ func init() {
 	rootCmd.AddCommand(dotfilesCmd)
 	rootCmd.AddCommand(importCmd)
 	rootCmd.AddCommand(auditCmd)
+	rootCmd.AddCommand(interviewCmd)
 }

@@ -49,6 +49,97 @@ type Environment struct {
 	Aliases        []string `json:"aliases,omitempty"`
 }
 
+// FieldsCaptured returns a list of dotted field paths that have non-empty values.
+func (p *Profile) FieldsCaptured() []string {
+	var fields []string
+
+	if p.Identity.Name != "" {
+		fields = append(fields, "identity.name")
+	}
+	if p.Identity.Role != "" {
+		fields = append(fields, "identity.role")
+	}
+	if p.Identity.Background != "" {
+		fields = append(fields, "identity.background")
+	}
+	if len(p.Identity.Goals) > 0 {
+		fields = append(fields, "identity.goals")
+	}
+	if p.Identity.CommunicationStyle != "" {
+		fields = append(fields, "identity.communication_style")
+	}
+	if len(p.Identity.ExpertiseAreas) > 0 {
+		fields = append(fields, "identity.expertise_areas")
+	}
+	if len(p.Identity.LearningFocus) > 0 {
+		fields = append(fields, "identity.learning_focus")
+	}
+	if p.Identity.WorkingHours != "" {
+		fields = append(fields, "identity.working_hours")
+	}
+	if p.Identity.Timezone != "" {
+		fields = append(fields, "identity.timezone")
+	}
+
+	if len(p.WorkStyle.Preferences) > 0 {
+		fields = append(fields, "work_style.preferences")
+	}
+	if p.WorkStyle.Workflow != "" {
+		fields = append(fields, "work_style.workflow")
+	}
+	if p.WorkStyle.DecisionStyle != "" {
+		fields = append(fields, "work_style.decision_style")
+	}
+	if p.WorkStyle.FeedbackStyle != "" {
+		fields = append(fields, "work_style.feedback_style")
+	}
+	if p.WorkStyle.CollabStyle != "" {
+		fields = append(fields, "work_style.collab_style")
+	}
+	if len(p.WorkStyle.Tools) > 0 {
+		fields = append(fields, "work_style.tools")
+	}
+	if len(p.WorkStyle.Languages) > 0 {
+		fields = append(fields, "work_style.languages")
+	}
+	if len(p.WorkStyle.DoNotDo) > 0 {
+		fields = append(fields, "work_style.do_not_do")
+	}
+	if len(p.WorkStyle.OutputPreferences) > 0 {
+		fields = append(fields, "work_style.output_preferences")
+	}
+
+	if p.Environment.OS != "" {
+		fields = append(fields, "environment.os")
+	}
+	if p.Environment.Shell != "" {
+		fields = append(fields, "environment.shell")
+	}
+	if p.Environment.Editor != "" {
+		fields = append(fields, "environment.editor")
+	}
+	if p.Environment.Terminal != "" {
+		fields = append(fields, "environment.terminal")
+	}
+	if p.Environment.Hardware != "" {
+		fields = append(fields, "environment.hardware")
+	}
+	if p.Environment.PackageManager != "" {
+		fields = append(fields, "environment.package_manager")
+	}
+	if p.Environment.DotfilesRepo != "" {
+		fields = append(fields, "environment.dotfiles_repo")
+	}
+	if len(p.Environment.KeyTools) > 0 {
+		fields = append(fields, "environment.key_tools")
+	}
+	if len(p.Environment.Aliases) > 0 {
+		fields = append(fields, "environment.aliases")
+	}
+
+	return fields
+}
+
 func Load(path string) (*Profile, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
