@@ -7,6 +7,9 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// Version is set by goreleaser ldflags at build time.
+var Version = "dev"
+
 type Config struct {
 	OutputDir string  `yaml:"output_dir"`
 	Dotfiles  string  `yaml:"dotfiles,omitempty"`
