@@ -32,7 +32,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: cyperx84/homebrew-tap
-          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          token: ${{ secrets.TAP_TOKEN }}
       - name: Update formula
         run: |
           TAG="${GITHUB_REF#refs/tags/}"
