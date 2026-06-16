@@ -7,6 +7,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const https = require('https');
+const crypto = require('crypto');
 const { execFileSync } = require('child_process');
 
 const REPO = 'cyperx84/soul-forge';
@@ -28,6 +29,39 @@ function target() {
 
 function binaryPath() {
   return path.join(__dirname, '..', 'vendor', 'soul-forge');
+}
+
+function sha256(file) {
+  return crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+}
+
+// verifyChecksum aborts the install unless `file` matches its entry in the
+// release's checksums.txt manifest (goreleaser publishes one per release).
+async function verifyChecksum(file, asset, version) {
+  const sumsUrl = `https://github.com/${REPO}/releases/download/v${version}/checksums.txt`;
+  const sumsTmp = path.join(os.tmpdir(), `soul-forge_${version}_checksums.txt`);
+  await download(sumsUrl, sumsTmp);
+  const sums = fs.readFileSync(sumsTmp, 'utf8');
+  fs.rmSync(sumsTmp, { force: true });
+
+  // checksums.txt lines are "<sha256>  <filename>".
+  const expected = sums
+    .split('\n')
+    .map((line) => line.trim().split(/\s+/))
+    .find(([, name]) => name === asset)?.[0];
+  if (!expected) {
+    throw new Error(`soul-forge: ${asset} not listed in checksums.txt for v${version}`);
+  }
+
+  const actual = sha256(file);
+  if (actual !== expected) {
+    fs.rmSync(file, { force: true });
+    throw new Error(
+      `soul-forge: checksum mismatch for ${asset}\n` +
+        `  expected ${expected}\n` +
+        `  got      ${actual}`
+    );
+  }
 }
 
 function download(url, dest, redirects = 0) {
@@ -68,6 +102,7 @@ async function ensure() {
 
   const tmp = path.join(os.tmpdir(), asset);
   await download(url, tmp);
+  await verifyChecksum(tmp, asset, version);
   execFileSync('tar', ['-xzf', tmp, '-C', vendor], { stdio: 'inherit' });
   fs.chmodSync(bin, 0o755);
   fs.rmSync(tmp, { force: true });
