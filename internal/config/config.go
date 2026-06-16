@@ -20,6 +20,39 @@ type Agent struct {
 	Name    string `yaml:"name"`
 	Role    string `yaml:"role"`
 	Channel string `yaml:"channel,omitempty"`
+
+	// Persona shapes the agent's SOUL.md. It is optional: role templates supply
+	// sensible defaults, and any fields set here override or augment them.
+	Persona *Persona `yaml:"persona,omitempty"`
+}
+
+// Persona gives an agent its own identity and voice — the heart of a good SOUL.md.
+// Every field is optional; omitted fields fall back to role-template defaults.
+type Persona struct {
+	Vibe       string     `yaml:"vibe,omitempty"`       // one-line identity card for IDENTITY.md
+	Emoji      string     `yaml:"emoji,omitempty"`      // signature emoji for IDENTITY.md
+	Backstory  string     `yaml:"backstory,omitempty"`  // one line: "a senior SRE with 12 years in cloud infra"
+	Voice      string     `yaml:"voice,omitempty"`      // tone: "dry, precise, allergic to filler"
+	Opinions   []string   `yaml:"opinions,omitempty"`   // takes the agent holds ("strong opinions, loosely held")
+	Principles []string   `yaml:"principles,omitempty"` // stance/communication posture (NOT operational rules — those live in AGENTS.md)
+	Boundaries []string   `yaml:"boundaries,omitempty"` // identity/integrity lines the agent won't cross
+	Avoid      []string   `yaml:"avoid,omitempty"`      // stylistic anti-patterns ("no corporate hedging")
+	Examples   []Exchange `yaml:"examples,omitempty"`   // few-shot exchanges that lock in voice
+}
+
+// Exchange is a single few-shot example: a prompt and the response the agent should model.
+type Exchange struct {
+	Prompt   string `yaml:"prompt"`
+	Response string `yaml:"response"`
+}
+
+// HasContent reports whether the persona carries any author-supplied content.
+func (p *Persona) HasContent() bool {
+	if p == nil {
+		return false
+	}
+	return p.Vibe != "" || p.Emoji != "" || p.Backstory != "" || p.Voice != "" || len(p.Opinions) > 0 ||
+		len(p.Principles) > 0 || len(p.Boundaries) > 0 || len(p.Avoid) > 0 || len(p.Examples) > 0
 }
 
 func Default() *Config {

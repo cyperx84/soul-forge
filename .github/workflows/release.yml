@@ -17,60 +17,30 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-go@v5
         with:
-          go-version: "1.22"
+          go-version: "1.25"
       - uses: goreleaser/goreleaser-action@v6
         with:
           version: latest
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Token with write access to cyperx84/homebrew-tap (for the brews: formula).
+          TAP_TOKEN: ${{ secrets.TAP_TOKEN }}
 
-  update-homebrew:
+  publish-npm:
     needs: goreleaser
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          repository: cyperx84/homebrew-tap
-          token: ${{ secrets.TAP_TOKEN }}
-      - name: Update formula
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+      - name: Publish npm launcher
+        working-directory: npm
         run: |
           TAG="${GITHUB_REF#refs/tags/}"
-          VERSION="${TAG#v}"
-          URL="https://github.com/cyperx84/soul-forge/archive/refs/tags/${TAG}.tar.gz"
-          SHA256=$(curl -sL "$URL" | shasum -a 256 | awk '{print $1}')
-
-          cat > Formula/soul-forge.rb << FORMULA
-          class SoulForge < Formula
-            desc "Agent fleet onboarding CLI for OpenClaw"
-            homepage "https://github.com/cyperx84/soul-forge"
-            url "${URL}"
-            sha256 "${SHA256}"
-            license "MIT"
-            head "https://github.com/cyperx84/soul-forge.git", branch: "main"
-
-            depends_on "go" => :build
-
-            def install
-              ldflags = %W[
-                -s -w
-                -X github.com/cyperx84/soul-forge/internal/config.Version=#{version}
-              ]
-              system "go", "build", *std_go_args(ldflags: ldflags), "."
-            end
-
-            test do
-              assert_match "soul-forge", shell_output("#{bin}/soul-forge --help")
-            end
-          end
-          FORMULA
-
-          sed -i 's/^          //' Formula/soul-forge.rb
-
-      - name: Commit and push
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add Formula/soul-forge.rb
-          git commit -m "Update soul-forge to ${GITHUB_REF#refs/tags/}"
-          git push
+          npm version "${TAG#v}" --no-git-tag-version --allow-same-version
+          npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

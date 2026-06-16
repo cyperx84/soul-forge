@@ -1,0 +1,43 @@
+{
+  "name": "soul-forge",
+  "version": "0.0.0",
+  "description": "Generate SOUL/USER/AGENTS/TOOLS/MEMORY files for AI agent fleets — OpenClaw, Hermes, or any harness that reads a soul.md.",
+  "bin": {
+    "soul-forge": "bin/cli.js"
+  },
+  "scripts": {
+    "postinstall": "node postinstall.js"
+  },
+  "files": [
+    "bin/",
+    "lib/",
+    "postinstall.js"
+  ],
+  "engines": {
+    "node": ">=16"
+  },
+  "os": [
+    "darwin",
+    "linux"
+  ],
+  "cpu": [
+    "x64",
+    "arm64"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cyperx84/soul-forge.git"
+  },
+  "homepage": "https://github.com/cyperx84/soul-forge#readme",
+  "bugs": "https://github.com/cyperx84/soul-forge/issues",
+  "license": "MIT",
+  "keywords": [
+    "openclaw",
+    "hermes",
+    "soul.md",
+    "agents.md",
+    "ai-agents",
+    "agent",
+    "cli"
+  ]
+}

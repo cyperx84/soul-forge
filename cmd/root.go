@@ -5,15 +5,21 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/cyperx84/soul-forge/internal/config"
 	"github.com/spf13/cobra"
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "soul-forge",
-	Short: "Scaffold USER.md and SOUL.md files for OpenClaw agent fleets",
-	Long: `soul-forge scaffolds and generates USER.md + SOUL.md files for OpenClaw agent fleets.
-It handles the structured parts of agent personality/context setup — questionnaire
-templates, dotfiles extraction, file generation from structured profiles, and auditing.`,
+	Use:     "soul-forge",
+	Version: config.Version,
+	Short:   "Generate SOUL/USER/AGENTS/TOOLS/MEMORY files for agent fleets",
+	Long: `soul-forge generates the workspace files an agent fleet needs — SOUL.md (persona),
+IDENTITY.md, USER.md, AGENTS.md (operating procedure), TOOLS.md, and MEMORY.md — for
+OpenClaw, Hermes, or any harness that reads a soul.md.
+
+It is a deterministic CLI and never calls an LLM provider. The onboarding interview is
+driven by your agent harness's own model via the bundled skill; soul-forge handles the
+structured parts — questionnaire, dotfiles extraction, generation, and auditing.`,
 }
 
 func Execute() {
@@ -34,5 +40,5 @@ func init() {
 	rootCmd.AddCommand(dotfilesCmd)
 	rootCmd.AddCommand(importCmd)
 	rootCmd.AddCommand(auditCmd)
-	rootCmd.AddCommand(interviewCmd)
+	rootCmd.AddCommand(schemaCmd)
 }

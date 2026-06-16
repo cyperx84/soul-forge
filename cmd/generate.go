@@ -19,8 +19,8 @@ var (
 
 var generateCmd = &cobra.Command{
 	Use:   "generate",
-	Short: "Generate USER.md and SOUL.md for agents",
-	Long:  `Reads profile from .soul-forge/profile.json and agent defs from soul-forge.yaml, then generates USER.md and SOUL.md per agent.`,
+	Short: "Generate SOUL/USER/AGENTS/TOOLS/MEMORY files for agents",
+	Long:  `Reads the profile from .soul-forge/profile.json and agent defs from soul-forge.yaml, then generates SOUL.md, USER.md, AGENTS.md, TOOLS.md, and a seeded MEMORY.md per agent. MEMORY.md is preserved on regenerate.`,
 	RunE:  runGenerate,
 }
 

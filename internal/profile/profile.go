@@ -23,6 +23,10 @@ type Identity struct {
 	LearningFocus      []string `json:"learning_focus,omitempty"`
 	WorkingHours       string   `json:"working_hours,omitempty"`
 	Timezone           string   `json:"timezone,omitempty"`
+
+	// Calibration: lets agents tune depth and verbosity without re-deriving it.
+	TechnicalSkill string `json:"technical_skill,omitempty"` // e.g. "expert", "intermediate", "learning"
+	Articulation   string `json:"articulation,omitempty"`    // how precise/terse: "terse, examples over prose"
 }
 
 type WorkStyle struct {
@@ -47,6 +51,27 @@ type Environment struct {
 	DotfilesRepo   string   `json:"dotfiles_repo,omitempty"`
 	KeyTools       []string `json:"key_tools,omitempty"`
 	Aliases        []string `json:"aliases,omitempty"`
+}
+
+// HasContent reports whether any identity field is set.
+func (i Identity) HasContent() bool {
+	return i.Name != "" || i.Role != "" || i.Background != "" || len(i.Goals) > 0 ||
+		i.CommunicationStyle != "" || len(i.ExpertiseAreas) > 0 || len(i.LearningFocus) > 0 ||
+		i.WorkingHours != "" || i.Timezone != "" || i.TechnicalSkill != "" || i.Articulation != ""
+}
+
+// HasContent reports whether any work-style field is set.
+func (w WorkStyle) HasContent() bool {
+	return len(w.Preferences) > 0 || w.Workflow != "" || w.DecisionStyle != "" ||
+		w.FeedbackStyle != "" || w.CollabStyle != "" || len(w.Tools) > 0 ||
+		len(w.Languages) > 0 || len(w.DoNotDo) > 0 || len(w.OutputPreferences) > 0
+}
+
+// HasContent reports whether any environment field is set.
+func (e Environment) HasContent() bool {
+	return e.OS != "" || e.Shell != "" || e.Editor != "" || e.Terminal != "" ||
+		e.Hardware != "" || e.PackageManager != "" || e.DotfilesRepo != "" ||
+		len(e.KeyTools) > 0 || len(e.Aliases) > 0
 }
 
 // FieldsCaptured returns a list of dotted field paths that have non-empty values.
@@ -79,6 +104,12 @@ func (p *Profile) FieldsCaptured() []string {
 	}
 	if p.Identity.Timezone != "" {
 		fields = append(fields, "identity.timezone")
+	}
+	if p.Identity.TechnicalSkill != "" {
+		fields = append(fields, "identity.technical_skill")
+	}
+	if p.Identity.Articulation != "" {
+		fields = append(fields, "identity.articulation")
 	}
 
 	if len(p.WorkStyle.Preferences) > 0 {
@@ -222,6 +253,12 @@ func mergeProfiles(base, overlay *Profile) *Profile {
 	}
 	if overlay.Identity.Timezone != "" {
 		base.Identity.Timezone = overlay.Identity.Timezone
+	}
+	if overlay.Identity.TechnicalSkill != "" {
+		base.Identity.TechnicalSkill = overlay.Identity.TechnicalSkill
+	}
+	if overlay.Identity.Articulation != "" {
+		base.Identity.Articulation = overlay.Identity.Articulation
 	}
 
 	// WorkStyle

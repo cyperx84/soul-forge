@@ -1,0 +1,57 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/cyperx84/soul-forge/profile.schema.json",
+  "title": "soul-forge profile",
+  "description": "Structured facts about the human an agent fleet works with. Produced by an onboarding interview and consumed by `soul-forge import` + `soul-forge generate`. Every field is optional; capture what's known, leave the rest empty.",
+  "type": "object",
+  "properties": {
+    "identity": {
+      "type": "object",
+      "description": "Who the person is.",
+      "properties": {
+        "name": { "type": "string", "description": "Their name or handle." },
+        "role": { "type": "string", "description": "Job title or role, e.g. 'Staff Engineer'." },
+        "background": { "type": "string", "description": "One or two lines of relevant background." },
+        "goals": { "type": "array", "items": { "type": "string" }, "description": "What they're trying to achieve right now." },
+        "communication_style": { "type": "string", "description": "How they like to communicate, e.g. 'direct, terse, examples over prose'." },
+        "expertise_areas": { "type": "array", "items": { "type": "string" }, "description": "Domains they already know well — agents should skip the basics here." },
+        "learning_focus": { "type": "array", "items": { "type": "string" }, "description": "Areas they're actively learning — agents should explain the 'why' here." },
+        "working_hours": { "type": "string", "description": "Typical working hours, e.g. '09:00-18:00'." },
+        "timezone": { "type": "string", "description": "IANA timezone or offset, e.g. 'Europe/London'." },
+        "technical_skill": { "type": "string", "description": "Calibration for depth: 'expert', 'intermediate', or 'learning'." },
+        "articulation": { "type": "string", "description": "How precisely/tersely they phrase things — calibrates verbosity." }
+      }
+    },
+    "work_style": {
+      "type": "object",
+      "description": "How they like to work.",
+      "properties": {
+        "preferences": { "type": "array", "items": { "type": "string" }, "description": "Things they value, e.g. 'minimal diffs', 'tests with the change'." },
+        "workflow": { "type": "string", "description": "Their workflow, e.g. 'kanban with daily review'." },
+        "decision_style": { "type": "string", "description": "How they decide, e.g. 'bias to action, adjust on feedback'." },
+        "feedback_style": { "type": "string", "description": "How they give/receive feedback, e.g. 'blunt and direct'." },
+        "collab_style": { "type": "string", "description": "Collaboration style, e.g. 'async-first, sync when stuck'." },
+        "tools": { "type": "array", "items": { "type": "string" }, "description": "Tools they work with." },
+        "languages": { "type": "array", "items": { "type": "string" }, "description": "Programming or natural languages they use." },
+        "do_not_do": { "type": "array", "items": { "type": "string" }, "description": "Hard 'do not' rules agents must treat as constraints." },
+        "output_preferences": { "type": "object", "additionalProperties": { "type": "string" }, "description": "Keyed output preferences, e.g. {'code': 'full blocks', 'explanations': 'short then example'}." }
+      }
+    },
+    "environment": {
+      "type": "object",
+      "description": "Their machine and tooling. Never store secrets here.",
+      "properties": {
+        "os": { "type": "string", "description": "Operating system, e.g. 'macOS Sequoia'." },
+        "shell": { "type": "string", "description": "Shell, e.g. 'zsh'." },
+        "editor": { "type": "string", "description": "Editor, e.g. 'neovim'." },
+        "terminal": { "type": "string", "description": "Terminal/multiplexer, e.g. 'WezTerm + tmux'." },
+        "hardware": { "type": "string", "description": "Relevant hardware, e.g. 'M3 MacBook Pro'." },
+        "package_manager": { "type": "string", "description": "Package manager(s), e.g. 'homebrew + mise'." },
+        "dotfiles_repo": { "type": "string", "description": "GitHub 'user/repo' for their dotfiles." },
+        "key_tools": { "type": "array", "items": { "type": "string" }, "description": "Notable CLI tools, e.g. ['fzf', 'ripgrep', 'delta']." },
+        "aliases": { "type": "array", "items": { "type": "string" }, "description": "Useful shell aliases worth knowing." }
+      }
+    },
+    "updated_at": { "type": "string", "description": "RFC3339 timestamp of the last update (optional)." }
+  }
+}

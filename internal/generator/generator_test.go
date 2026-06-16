@@ -33,6 +33,46 @@ func TestGenerateWritesFiles(t *testing.T) {
 	}
 }
 
+func TestGenerateAllFilesAndMemoryPreserve(t *testing.T) {
+	dir := t.TempDir()
+	oldwd, _ := os.Getwd()
+	defer os.Chdir(oldwd)
+	os.Chdir(dir)
+
+	cfg := &config.Config{OutputDir: "agents"}
+	prof := &profile.Profile{Identity: profile.Identity{Name: "Chris"}}
+	agent := config.Agent{Name: "alpha", Role: "coding"}
+	if err := Generate(cfg, prof, agent, false); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"SOUL.md", "IDENTITY.md", "USER.md", "AGENTS.md", "TOOLS.md", "MEMORY.md"} {
+		if _, err := os.Stat(filepath.Join("agents", "alpha", name)); err != nil {
+			t.Errorf("expected %s to be generated: %v", name, err)
+		}
+	}
+
+	// Operational rules belong in AGENTS.md, not SOUL.md (OpenClaw single-responsibility).
+	soul, _ := os.ReadFile(filepath.Join("agents", "alpha", "SOUL.md"))
+	agents, _ := os.ReadFile(filepath.Join("agents", "alpha", "AGENTS.md"))
+	if strings.Contains(string(soul), "Don't commit, push, or delete unless asked") {
+		t.Error("operational rule leaked into SOUL.md")
+	}
+	if !strings.Contains(string(agents), "Don't commit, push, or delete unless asked") {
+		t.Error("AGENTS.md missing role operating rules")
+	}
+
+	// MEMORY.md must survive a regenerate.
+	memPath := filepath.Join("agents", "alpha", "MEMORY.md")
+	os.WriteFile(memPath, []byte("learned: Chris hates emoji"), 0o644)
+	if err := Generate(cfg, prof, agent, false); err != nil {
+		t.Fatal(err)
+	}
+	data, _ := os.ReadFile(memPath)
+	if !strings.Contains(string(data), "hates emoji") {
+		t.Errorf("MEMORY.md was clobbered on regenerate: %s", data)
+	}
+}
+
 func TestGenerateDryRunAndValidation(t *testing.T) {
 	cfg := &config.Config{OutputDir: "agents"}
 	prof := &profile.Profile{}
