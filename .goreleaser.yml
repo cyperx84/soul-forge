@@ -16,10 +16,29 @@ builds:
 archives:
   - format: tar.gz
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - README.md
+      - LICENSE
 
 checksum:
   name_template: "checksums.txt"
   algorithm: sha256
+
+# Homebrew: publish a formula that installs the prebuilt binary (no Go build needed)
+# into the cyperx84/homebrew-tap repo. Requires TAP_TOKEN with write access to it.
+brews:
+  - name: soul-forge
+    repository:
+      owner: cyperx84
+      name: homebrew-tap
+      token: "{{ .Env.TAP_TOKEN }}"
+    homepage: "https://github.com/cyperx84/soul-forge"
+    description: "Generate SOUL/USER/AGENTS/TOOLS/MEMORY files for AI agent fleets"
+    license: "MIT"
+    install: |
+      bin.install "soul-forge"
+    test: |
+      system "#{bin}/soul-forge", "--version"
 
 release:
   github:

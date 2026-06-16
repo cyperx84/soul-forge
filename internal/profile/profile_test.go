@@ -11,8 +11,8 @@ import (
 
 func TestFieldsCaptured(t *testing.T) {
 	p := &Profile{
-		Identity: Identity{Name: "Chris", Goals: []string{"ship"}, Timezone: "AEST"},
-		WorkStyle: WorkStyle{Tools: []string{"go"}, OutputPreferences: map[string]string{"style": "diff"}},
+		Identity:    Identity{Name: "Chris", Goals: []string{"ship"}, Timezone: "AEST"},
+		WorkStyle:   WorkStyle{Tools: []string{"go"}, OutputPreferences: map[string]string{"style": "diff"}},
 		Environment: Environment{OS: "macOS", Aliases: []string{"gs"}},
 	}
 	got := p.FieldsCaptured()

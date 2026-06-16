@@ -50,8 +50,11 @@ func TestRunAndCheckers(t *testing.T) {
 		t.Fatalf("results=%d", len(results))
 	}
 	out := results[0].Format()
-	if !strings.Contains(out, "placeholder values") || !strings.Contains(out, "stale") {
-		t.Fatalf("format missing issues: %s", out)
+	// USER.md placeholder + staleness + missing optional files + SOUL quality gaps.
+	for _, want := range []string{"placeholder values", "stale", "AGENTS.md", "What I Believe"} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("format missing %q:\n%s", want, out)
+		}
 	}
 
 	empty := checkEmptySections("## One\n\n## Two\nhello\n")
@@ -60,10 +63,42 @@ func TestRunAndCheckers(t *testing.T) {
 	}
 }
 
+func TestCheckSoulQuality(t *testing.T) {
+	// A vague, persona-less SOUL.md should draw several quality warnings.
+	weak := "I am bob. I will be helpful and provide comprehensive and thoughtful assistance.\n"
+	r := &Result{Agent: "bob"}
+	checkSoulQuality(weak, r)
+	var msgs string
+	for _, i := range r.Issues {
+		msgs += i.Message + "\n"
+	}
+	for _, want := range []string{"be helpful", "comprehensive and thoughtful", "What I Believe", "example exchanges"} {
+		if !strings.Contains(msgs, want) {
+			t.Errorf("expected quality issue mentioning %q, got:\n%s", want, msgs)
+		}
+	}
+
+	// A complete soul file should pass the persona-section and example checks.
+	strong := "## What I Believe\nx\n## How I Decide\ny\n## What I Won't Do\nz\n## How I Respond\nexample\n"
+	r2 := &Result{Agent: "ace"}
+	checkSoulQuality(strong, r2)
+	for _, i := range r2.Issues {
+		if strings.Contains(i.Message, "missing persona section") || strings.Contains(i.Message, "example exchanges") {
+			t.Errorf("strong soul file flagged: %s", i.Message)
+		}
+	}
+}
+
 func TestCheckFileMissing(t *testing.T) {
 	r := &Result{Agent: "alpha"}
-	checkFile(t.TempDir(), "USER.md", nil, r)
+	checkFile(t.TempDir(), fileSpec{"USER.md", true}, nil, r)
 	if len(r.Issues) != 1 || r.Issues[0].Severity != "error" {
-		t.Fatalf("issues=%+v", r.Issues)
+		t.Fatalf("required missing should error: issues=%+v", r.Issues)
+	}
+	// Optional files warn instead of erroring when missing.
+	r2 := &Result{Agent: "alpha"}
+	checkFile(t.TempDir(), fileSpec{"MEMORY.md", false}, nil, r2)
+	if len(r2.Issues) != 1 || r2.Issues[0].Severity != "warning" {
+		t.Fatalf("optional missing should warn: issues=%+v", r2.Issues)
 	}
 }

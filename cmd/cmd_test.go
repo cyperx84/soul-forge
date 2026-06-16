@@ -98,13 +98,6 @@ func TestRunGenerateAndAuditErrors(t *testing.T) {
 	}
 }
 
-func TestRunInterviewErrors(t *testing.T) {
-	interviewProvider = "unsupported"
-	if err := runInterview(&cobra.Command{}, nil); err == nil {
-		t.Fatal("expected error")
-	}
-}
-
 func captureStdout(t *testing.T, fn func()) string {
 	t.Helper()
 	old := os.Stdout

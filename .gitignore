@@ -5,6 +5,10 @@ soul-forge.exe
 # soul-forge runtime directory
 .soul-forge/
 
+# npm distribution: downloaded binary + deps
+npm/vendor/
+npm/node_modules/
+
 # OS / editor
 .DS_Store
 *.swp

@@ -20,8 +20,8 @@ var (
 
 var auditCmd = &cobra.Command{
 	Use:          "audit",
-	Short:        "Audit USER.md and SOUL.md files for issues",
-	Long:         `Checks for missing files, empty sections, broken references, and staleness.`,
+	Short:        "Audit generated agent files for issues",
+	Long:         `Checks each agent's generated files for missing files, empty sections, staleness, and SOUL.md quality (persona present, sharp not vague, sensible length).`,
 	RunE:         runAudit,
 	SilenceUsage: true,
 }

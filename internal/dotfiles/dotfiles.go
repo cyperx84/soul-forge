@@ -79,12 +79,12 @@ func scanDir(dir string) (*Info, error) {
 
 	// Tool files: detected by exact filename anywhere in tree
 	toolFileNames := map[string]string{
-		".tmux.conf":      "tmux",
-		"tmux.conf":       "tmux",
-		".tool-versions":  "asdf",
-		".mise.toml":      "mise",
-		"Brewfile":        "homebrew",
-		"aerospace.toml":  "aerospace",
+		".tmux.conf":     "tmux",
+		"tmux.conf":      "tmux",
+		".tool-versions": "asdf",
+		".mise.toml":     "mise",
+		"Brewfile":       "homebrew",
+		"aerospace.toml": "aerospace",
 	}
 
 	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {

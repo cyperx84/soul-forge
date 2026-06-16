@@ -13,6 +13,26 @@ import (
 
 var validAgentName = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9-]*$`)
 
+// output describes one generated file: which template renders it, and whether an
+// existing copy should be preserved on regenerate (MEMORY.md accumulates over time).
+type output struct {
+	filename string
+	template string
+	preserve bool
+}
+
+// outputs is the full set of files generated per agent, in display order.
+var outputs = []output{
+	{"SOUL.md", "soul.md.tmpl", false},
+	{"IDENTITY.md", "identity.md.tmpl", false},
+	{"USER.md", "user.md.tmpl", false},
+	{"AGENTS.md", "agents.md.tmpl", false},
+	{"TOOLS.md", "tools.md.tmpl", false},
+	{"MEMORY.md", "memory.md.tmpl", true}, // seed once; never clobber learned memory
+}
+
+// Generate renders and writes all agent files for a single agent. With dryRun set,
+// it prints the rendered output to stdout instead of writing anything.
 func Generate(cfg *config.Config, prof *profile.Profile, agent config.Agent, dryRun bool) error {
 	if !validAgentName.MatchString(agent.Name) {
 		return fmt.Errorf("invalid agent name %q: must contain only alphanumeric characters and hyphens, and start with alphanumeric", agent.Name)
@@ -22,23 +42,25 @@ func Generate(cfg *config.Config, prof *profile.Profile, agent config.Agent, dry
 		AgentName: agent.Name,
 		AgentRole: agent.Role,
 		Channel:   agent.Channel,
+		Persona:   agent.EffectivePersona(),
+		Operating: config.DefaultOperatingRules(agent.Role),
 		Profile:   prof,
 		OutputDir: cfg.OutputDir,
 	}
 
-	userMD, err := tmplpkg.Render("user.md.tmpl", data)
-	if err != nil {
-		return fmt.Errorf("render USER.md: %w", err)
-	}
-
-	soulMD, err := tmplpkg.Render("soul.md.tmpl", data)
-	if err != nil {
-		return fmt.Errorf("render SOUL.md: %w", err)
+	rendered := make(map[string]string, len(outputs))
+	for _, o := range outputs {
+		content, err := tmplpkg.Render(o.template, data)
+		if err != nil {
+			return fmt.Errorf("render %s: %w", o.filename, err)
+		}
+		rendered[o.filename] = content
 	}
 
 	if dryRun {
-		fmt.Printf("=== USER.md (%s) ===\n%s\n", agent.Name, userMD)
-		fmt.Printf("=== SOUL.md (%s) ===\n%s\n", agent.Name, soulMD)
+		for _, o := range outputs {
+			fmt.Printf("=== %s (%s) ===\n%s\n", o.filename, agent.Name, rendered[o.filename])
+		}
 		return nil
 	}
 
@@ -47,17 +69,19 @@ func Generate(cfg *config.Config, prof *profile.Profile, agent config.Agent, dry
 		return fmt.Errorf("create agent dir: %w", err)
 	}
 
-	userPath := filepath.Join(agentDir, "USER.md")
-	if err := os.WriteFile(userPath, []byte(userMD), 0644); err != nil {
-		return fmt.Errorf("write USER.md: %w", err)
+	for _, o := range outputs {
+		path := filepath.Join(agentDir, o.filename)
+		if o.preserve {
+			if _, err := os.Stat(path); err == nil {
+				fmt.Printf("• Kept %s (preserved existing)\n", path)
+				continue
+			}
+		}
+		if err := os.WriteFile(path, []byte(rendered[o.filename]), 0644); err != nil {
+			return fmt.Errorf("write %s: %w", o.filename, err)
+		}
+		fmt.Printf("✓ Wrote %s\n", path)
 	}
-	fmt.Printf("✓ Wrote %s\n", userPath)
-
-	soulPath := filepath.Join(agentDir, "SOUL.md")
-	if err := os.WriteFile(soulPath, []byte(soulMD), 0644); err != nil {
-		return fmt.Errorf("write SOUL.md: %w", err)
-	}
-	fmt.Printf("✓ Wrote %s\n", soulPath)
 
 	return nil
 }
