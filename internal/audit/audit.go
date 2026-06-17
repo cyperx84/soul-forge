@@ -67,6 +67,15 @@ var auditFiles = []fileSpec{
 	{"AGENTS.md", false},
 	{"TOOLS.md", false},
 	{"MEMORY.md", false},
+	{"soul.json", false},
+}
+
+// injectionMarkers flag prompt-injection-shaped text that's leaked into a persona
+// field. SOUL.md is loaded into the system prompt verbatim, so these don't belong.
+var injectionMarkers = []string{
+	"ignore previous", "ignore all previous", "disregard previous",
+	"disregard the above", "you are now", "system prompt:", "</system>",
+	"new instructions:", "override your", "forget everything",
 }
 
 // vaguePhrases are hedging, generic phrasings that weaken a SOUL file. A great
@@ -151,6 +160,15 @@ func checkFile(agentDir string, spec fileSpec, profileStat os.FileInfo, result *
 		checkSoulQuality(content, result)
 	}
 
+	// soul.json is a SoulSpec package manifest; a publishable package wants a license.
+	if spec.name == "soul.json" && !strings.Contains(content, "\"license\"") {
+		result.Issues = append(result.Issues, Issue{
+			Severity: "info",
+			File:     "soul.json",
+			Message:  "no license — set `license:` in soul-forge.yaml for a publishable SoulSpec package",
+		})
+	}
+
 	// AGENTS.md and TOOLS.md ship with TODO placeholders for project-specific detail.
 	// Nudge (info only) so they don't get forgotten.
 	if (spec.name == "AGENTS.md" || spec.name == "TOOLS.md") && strings.Contains(content, "> TODO") {
@@ -200,12 +218,27 @@ func checkSoulQuality(content string, result *Result) {
 		}
 	}
 
+	// Few-shot examples are the strongest lever on voice consistency (the role-play
+	// literature is consistent on this), so a soul file without them is a real gap,
+	// not a nicety — warn, don't whisper.
 	if !strings.Contains(content, "How I Respond") {
 		result.Issues = append(result.Issues, Issue{
-			Severity: "info",
+			Severity: "warning",
 			File:     "SOUL.md",
-			Message:  "no example exchanges — adding 1-2 (persona.examples in soul-forge.yaml), ideally with a counter-example, is the single best way to lock in voice",
+			Message:  "no example exchanges — adding 1-2 (persona.examples in soul-forge.yaml), ideally with a counter-example, is the single best lever on voice",
 		})
+	}
+
+	// Prompt-injection-shaped text in a persona field lands verbatim in slot #1 of the
+	// system prompt. Flag it — Hermes and SoulSpec both scan persona files for this.
+	for _, marker := range injectionMarkers {
+		if strings.Contains(lower, marker) {
+			result.Issues = append(result.Issues, Issue{
+				Severity: "warning",
+				File:     "SOUL.md",
+				Message:  fmt.Sprintf("possible prompt-injection text %q — persona fields are loaded into the system prompt verbatim; remove instruction-like content", marker),
+			})
+		}
 	}
 
 	// Predictiveness: the bar for a strong soul is that a reader could predict the
@@ -226,11 +259,13 @@ func checkSoulQuality(content string, result *Result) {
 		})
 	}
 
+	// Length matters less than placement: models neglect the middle of a long prompt
+	// ("lost in the middle"), so a long soul file risks burying its load-bearing parts.
 	if n := len(strings.Fields(content)); n > maxSoulWords {
 		result.Issues = append(result.Issues, Issue{
 			Severity: "warning",
 			File:     "SOUL.md",
-			Message:  fmt.Sprintf("SOUL.md is %d words (> %d) — long soul files dilute themselves; trim to the essentials", n, maxSoulWords),
+			Message:  fmt.Sprintf("SOUL.md is %d words (> %d) — trim flavor, and keep voice + boundaries near the top (and ideally restated at the end) so they aren't lost in the middle", n, maxSoulWords),
 		})
 	}
 }
