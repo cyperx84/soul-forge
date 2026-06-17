@@ -85,8 +85,9 @@ func buildCriteria(p *config.Persona) []string {
 
 func truncate(s string) string {
 	const n = 60
-	if len(s) <= n {
+	r := []rune(s)
+	if len(r) <= n {
 		return s
 	}
-	return strings.TrimSpace(s[:n]) + "…"
+	return strings.TrimSpace(string(r[:n])) + "…"
 }
