@@ -74,6 +74,9 @@ var auditFiles = []fileSpec{
 var vaguePhrases = []string{
 	"be helpful", "maintain professionalism", "comprehensive and thoughtful",
 	"as an ai", "as a language model", "high-quality assistance", "best of my ability",
+	// Filler/preamble the role defaults explicitly tell agents to drop.
+	"happy to help", "i'd be happy to", "i hope this helps", "great question",
+	"let me know if you", "feel free to", "certainly!", "dive deep", "in today's",
 }
 
 // soulSections are the persona sections a strong SOUL.md should carry.
@@ -184,7 +187,9 @@ func checkSoulQuality(content string, result *Result) {
 		}
 	}
 
-	lower := strings.ToLower(content)
+	// Counter-examples deliberately contain wrong-voice phrasing — scanning them for
+	// vague language would flag the very anti-patterns they're meant to teach against.
+	lower := strings.ToLower(dropSection(content, "How I Don't Respond"))
 	for _, phrase := range vaguePhrases {
 		if strings.Contains(lower, phrase) {
 			result.Issues = append(result.Issues, Issue{
@@ -199,7 +204,25 @@ func checkSoulQuality(content string, result *Result) {
 		result.Issues = append(result.Issues, Issue{
 			Severity: "info",
 			File:     "SOUL.md",
-			Message:  "no example exchanges — adding 1-2 (persona.examples in soul-forge.yaml) is the single best way to lock in voice",
+			Message:  "no example exchanges — adding 1-2 (persona.examples in soul-forge.yaml), ideally with a counter-example, is the single best way to lock in voice",
+		})
+	}
+
+	// Predictiveness: the bar for a strong soul is that a reader could predict the
+	// agent's take on a *new* topic. Concrete opinions are what make that possible;
+	// a thin list reads generic no matter how clean the prose.
+	if countBulletsUnder(content, "What I Believe") < 2 {
+		result.Issues = append(result.Issues, Issue{
+			Severity: "info",
+			File:     "SOUL.md",
+			Message:  "few concrete opinions — a reader should be able to predict this agent's take on a topic it's never seen; add sharp, specific stances",
+		})
+	}
+	if !strings.Contains(content, "Tensions & Contradictions") {
+		result.Issues = append(result.Issues, Issue{
+			Severity: "info",
+			File:     "SOUL.md",
+			Message:  "no Tensions & Contradictions — an all-virtues persona reads generic; one honest contradiction makes it identifiable",
 		})
 	}
 
@@ -210,6 +233,41 @@ func checkSoulQuality(content string, result *Result) {
 			Message:  fmt.Sprintf("SOUL.md is %d words (> %d) — long soul files dilute themselves; trim to the essentials", n, maxSoulWords),
 		})
 	}
+}
+
+// dropSection returns content with the "## " section whose heading contains the
+// given substring removed (up to the next "## " heading or end). Used to exclude
+// intentionally wrong-voice content from quality scans.
+func dropSection(content, headingSubstr string) string {
+	lines := strings.Split(content, "\n")
+	out := make([]string, 0, len(lines))
+	skipping := false
+	for _, ln := range lines {
+		if strings.HasPrefix(ln, "## ") {
+			skipping = strings.Contains(ln, headingSubstr)
+		}
+		if !skipping {
+			out = append(out, ln)
+		}
+	}
+	return strings.Join(out, "\n")
+}
+
+// countBulletsUnder counts markdown "- " bullets directly under the given "## "
+// heading, stopping at the next "## " heading. Used to gauge persona richness.
+func countBulletsUnder(content, heading string) int {
+	lines := strings.Split(content, "\n")
+	in, n := false, 0
+	for _, ln := range lines {
+		if strings.HasPrefix(ln, "## ") {
+			in = strings.TrimSpace(strings.TrimPrefix(ln, "## ")) == heading
+			continue
+		}
+		if in && strings.HasPrefix(strings.TrimSpace(ln), "- ") {
+			n++
+		}
+	}
+	return n
 }
 
 func checkEmptySections(content string) []string {

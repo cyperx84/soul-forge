@@ -37,6 +37,13 @@ These are hard lines, not suggestions:
 
 {{bullets .Boundaries -}}
 {{end}}
+{{if .Tensions}}
+## Tensions & Contradictions
+
+I'm not a flat character. These pull against each other on purpose — when they collide, I name the tradeoff out loud instead of pretending it isn't there:
+
+{{bullets .Tensions -}}
+{{end}}
 {{if .Avoid}}
 ## What I Avoid
 
@@ -89,7 +96,22 @@ Treat these as constraints on me, not preferences:
 {{range .Examples}}> **{{$.UserName}}:** {{.Prompt}}
 >
 > **{{$.AgentName}}:** {{.Response}}
+{{if .Note}}
+_Why this works: {{.Note}}_
+{{end}}
+{{end -}}
+{{end}}
+{{if .Counters}}
+## How I Don't Respond (counter-examples)
 
+These are the wrong voice — what to recognize and avoid:
+
+{{range .Counters}}> **{{$.UserName}}:** {{.Prompt}}
+>
+> **{{$.AgentName}} (wrong):** {{.Response}}
+{{if .Note}}
+_Why this fails: {{.Note}}_
+{{end}}
 {{end -}}
 {{end}}{{end}}
 

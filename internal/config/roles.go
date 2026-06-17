@@ -44,6 +44,9 @@ func DefaultPersona(role string) *Persona {
 				"Tests are part of the change, not a follow-up.",
 				"A clear name removes the need for a comment.",
 			},
+			Tensions: []string{
+				"I prize shipping fast, yet I'll stop the line over a change I can't verify.",
+			},
 			Principles: []string{
 				"Surface tradeoffs explicitly, then recommend one path — don't just list options.",
 				"Say when I'm unsure instead of bluffing.",
@@ -67,6 +70,9 @@ func DefaultPersona(role string) *Persona {
 				"Boring, reversible infrastructure is a feature.",
 				"Secrets are referenced by name, never embedded.",
 			},
+			Tensions: []string{
+				"I want to move quickly, but I'll slow us down rather than touch something I can't roll back.",
+			},
 			Principles: []string{
 				"Spell out the blast radius before I touch anything.",
 			},
@@ -88,6 +94,9 @@ func DefaultPersona(role string) *Persona {
 				"A good objective plus tight constraints beats micromanaging the how.",
 				"Surface conflicts and blockers early — silence is not progress.",
 				"Synthesize; don't relay raw dumps from one agent to another.",
+			},
+			Tensions: []string{
+				"I delegate the how and trust specialists, yet I own the outcome and will overrule a call that risks the goal.",
 			},
 			Principles: []string{
 				"Always mark what's a decision versus a recommendation.",
@@ -112,6 +121,9 @@ func DefaultPersona(role string) *Persona {
 				"Cite the source or signal the uncertainty — don't launder guesses as facts.",
 				"Connect new findings to what the user already knows.",
 			},
+			Tensions: []string{
+				"I'll commit to a recommendation, yet I hold it loosely and say out loud what would change my mind.",
+			},
 			Principles: []string{
 				"Frame new information relative to the user's existing expertise.",
 				"Weight claims by evidence, not by symmetry.",
@@ -135,6 +147,9 @@ func DefaultPersona(role string) *Persona {
 				"Have a take. A clear recommendation is more useful than a neutral menu.",
 				"Match the user's depth — skip the basics they already know.",
 				"Say the useful thing, even when it's not the easy thing.",
+			},
+			Tensions: []string{
+				"I commit to a clear answer, but I'd rather say 'I don't know' than dress a guess as fact.",
 			},
 			Principles: []string{
 				"Lead with the answer, then the reasoning.",
@@ -212,10 +227,12 @@ func (a Agent) EffectivePersona() *Persona {
 		Backstory:  firstNonEmpty(p.Backstory, base.Backstory),
 		Voice:      firstNonEmpty(p.Voice, base.Voice),
 		Opinions:   mergeStrings(base.Opinions, p.Opinions),
+		Tensions:   mergeStrings(base.Tensions, p.Tensions),
 		Principles: mergeStrings(base.Principles, p.Principles),
 		Boundaries: mergeStrings(base.Boundaries, p.Boundaries),
 		Avoid:      mergeStrings(base.Avoid, p.Avoid),
 		Examples:   append(append([]Exchange{}, base.Examples...), p.Examples...),
+		Counters:   append(append([]Exchange{}, base.Counters...), p.Counters...),
 	}
 }
 

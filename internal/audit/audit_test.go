@@ -79,12 +79,23 @@ func TestCheckSoulQuality(t *testing.T) {
 	}
 
 	// A complete soul file should pass the persona-section and example checks.
-	strong := "## What I Believe\nx\n## How I Decide\ny\n## What I Won't Do\nz\n## How I Respond\nexample\n"
+	strong := "## What I Believe\n- a\n- b\n## How I Decide\ny\n## What I Won't Do\nz\n## Tensions & Contradictions\n- t\n## How I Respond\nexample\n"
 	r2 := &Result{Agent: "ace"}
 	checkSoulQuality(strong, r2)
 	for _, i := range r2.Issues {
 		if strings.Contains(i.Message, "missing persona section") || strings.Contains(i.Message, "example exchanges") {
 			t.Errorf("strong soul file flagged: %s", i.Message)
+		}
+	}
+
+	// Wrong-voice phrasing inside the counter-examples section must NOT be flagged —
+	// those anti-patterns are intentional teaching material, not the agent's voice.
+	withCounter := strong + "## How I Don't Respond (counter-examples)\n> bot: Certainly! I'd be happy to help.\n"
+	r3 := &Result{Agent: "cee"}
+	checkSoulQuality(withCounter, r3)
+	for _, i := range r3.Issues {
+		if strings.Contains(i.Message, "vague/hedging") {
+			t.Errorf("counter-example wrongly flagged as vague: %s", i.Message)
 		}
 	}
 }

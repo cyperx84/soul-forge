@@ -2,7 +2,7 @@
 
 Generate sharp, opinionated `SOUL.md`, `USER.md`, `AGENTS.md`, `TOOLS.md`, and `MEMORY.md` files for AI agent fleets — [OpenClaw](https://openclaw.dev), Hermes, or any harness that reads a `soul.md`.
 
-soul-forge is a **deterministic CLI that never calls an LLM provider**. It scaffolds the files, supplies opinionated role-based persona defaults, and audits the result for quality. The *interview* — turning a conversation into a profile — is driven by **your agent harness's own model**, via the bundled [Skill](.claude/skills/soul-forge/SKILL.md). No API keys, no hardcoded models.
+soul-forge is a **deterministic, installable CLI (brew / npm / go) for designing a *fleet*** — an orchestrator and its workers, each with a distinct voice but shared boundaries — and keeping their persona files honest. It scaffolds the file set, supplies opinionated role-based defaults, routes your onboarding answers into per-agent personas, and **audits** the result (vague language, missing persona sections, bloat — exits non-zero, so it drops into CI). It **never calls an LLM provider**: no API keys, no hardcoded models, reproducible output. The one model-driven step — the *interview* that turns a conversation into a profile — runs on **your own harness's model** via the bundled [Skill](.claude/skills/soul-forge/SKILL.md).
 
 Two ways to build a profile:
 - **Harness-driven (recommended):** ask Claude Code (or any harness) to run the `soul-forge` skill. Its model interviews you, writes `profile.json`, designs each agent's persona, and runs the pipeline.
@@ -123,11 +123,18 @@ agents:
       voice: "dry, precise, allergic to filler"
       opinions:
         - "I'd rather delete code than add it."
+      tensions:                 # honest contradictions — what keeps a persona from reading flat
+        - "I prize shipping fast, yet I'll stop the line over a change I can't verify."
       boundaries:               # integrity lines, not action rules (those are role-driven → AGENTS.md)
         - "I won't ship a change I can't explain."
       examples:             # few-shot — the highest-leverage field
         - prompt: "Add retries to this call?"
           response: "Done — 3-attempt backoff. Caveat: the endpoint isn't idempotent, so retries could double-charge. Gate it on a request key?"
+          note: "leads with the caveat, not an apology"   # optional calibration: the move it shows
+      counter_examples:         # negative calibration — how NOT to sound
+        - prompt: "Add retries to this call?"
+          response: "Certainly! I'd be absolutely delighted to help with that!"
+          note: "servile preamble, no substance"
 ```
 
 Roles are normalized (`software-engineer` → `coding`, `devops`/`sre` → `infrastructure`, etc.), so natural names work.
@@ -240,6 +247,27 @@ soul-forge import my-profile.json
 soul-forge import partial-update.json --merge
 ```
 
+**Personas ride along.** The import payload may carry an optional top-level `agents`
+array — per-agent persona designs (`vibe`, `voice`, `opinions`, `boundaries`,
+`examples`, …). `import` keeps the human facts in `profile.json` and **routes the
+personas into `soul-forge.yaml`** (matched by name; an unknown name is appended to
+the fleet). This is how the voice and convictions drawn out during onboarding reach
+each agent's `SOUL.md` instead of being stranded as facts. See `soul-forge schema`
+for the full shape.
+
+```jsonc
+{
+  "identity": { "name": "Ada" },
+  "agents": [
+    { "name": "coder", "role": "coding", "persona": {
+        "voice": "dry, precise, allergic to filler",
+        "opinions": ["I'd rather delete code than add it."],
+        "examples": [{ "prompt": "Add retries?", "response": "Done — 3-attempt backoff. The endpoint isn't idempotent, so gate it on a request key?" }]
+    }}
+  ]
+}
+```
+
 **`profile.json` schema:**
 
 ```json
@@ -305,7 +333,9 @@ Checks:
 - Missing files (`SOUL.md`/`USER.md` error; `AGENTS.md`/`TOOLS.md`/`MEMORY.md` warn)
 - Empty or placeholder sections, staleness (file older than `profile.json`)
 - **SOUL.md quality:** persona sections present (believes / decides / won't do),
-  vague-or-hedging language flagged, and a soft ~1500-word length ceiling
+  vague-or-hedging language flagged (counter-examples are exempt), a **predictiveness**
+  nudge when opinions are too thin or a Tensions section is missing, and a soft
+  ~1500-word length ceiling
 
 Exits with code `1` if errors or warnings are found (CI-friendly).
 
@@ -313,6 +343,41 @@ Exits with code `1` if errors or warnings are found (CI-friendly).
 # Use in CI
 soul-forge audit --all || echo "Agent files need updating"
 ```
+
+`audit` is static — it reads the files. For an *empirical* check, see `rubric`.
+
+---
+
+### `soul-forge rubric`
+
+Emits a deterministic **drift-test** for a persona: probes and scoring criteria
+derived from the agent's own opinions, boundaries, and tensions. soul-forge never
+calls a model, so it can't run the test — it hands you the rubric to run against a
+cheap model (or have your harness run it), scoring how well the agent stays in
+character under pressure. The empirical complement to `audit`.
+
+```bash
+soul-forge rubric --agent coder
+soul-forge rubric --all > drift-tests.md
+```
+
+---
+
+### `soul-forge import --from-soul-md <dir>` (interop)
+
+soul-forge plays well with [aaronjmars/soul.md](https://github.com/aaronjmars/soul.md):
+that tool *authors* a single voice; soul-forge *manages and audits a fleet*. Point
+`import` at a soul.md persona directory (`SOUL.md` + optional `STYLE.md` + `examples/`)
+and it maps that persona onto one of your agents:
+
+```bash
+soul-forge import --from-soul-md ./my-soul --agent coder
+```
+
+Worldview/opinions → `opinions`, voice principles → `voice`, boundaries → `boundaries`,
+tensions → `tensions`, pet peeves → `avoid`, examples → `examples`/`counter_examples`.
+The mapping is intentionally lossy (it lifts the agent-relevant parts); review the
+result in `soul-forge.yaml` before generating.
 
 ---
 

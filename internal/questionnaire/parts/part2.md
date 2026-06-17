@@ -1,29 +1,29 @@
-## What programming languages do you use most, and what's your relationship with each?
-> Not just what you know — what do you reach for first, what do you tolerate, what do you avoid and why?
+## What are the tools or mediums of your craft — and your honest relationship with each?
+> The languages, software, instruments, or methods you work in. What you reach for first, what you tolerate, and what you avoid and why.
 
-## What development tools are non-negotiable for you?
-> The tools you'd be lost without. Editor, debugger, terminal, browser tools — whatever you can't live without.
+## What can't you work without?
+> The handful of tools, rituals, or conditions you'd be lost without. Editor, notebook, terminal, whiteboard — whatever's load-bearing for you.
 
-## How do you prefer to receive code feedback or reviews?
-> Inline comments? Summary at the end? Blunt and direct, or diplomatic? Do you want "why" explanations or just the fix?
+## How do you want to be given feedback or corrections?
+> Blunt or cushioned? Inline as you go, or summarized at the end? Do you want the "why," or just the fix? Where's the line between direct and harsh for you?
 
-## How do you structure your work — tasks, projects, focus?
-> Kanban, todo.txt, Notion, post-it notes? How do you decide what to work on next?
+## How do you decide what to work on next?
+> Lists, a board, a calendar, gut feel? How do you keep track of what matters and protect your focus from everything that doesn't.
 
-## What's your preferred output format when asking for help?
-> Do you want full code blocks or diffs? Step-by-step instructions or just the answer? Short or thorough?
+## When you ask for help, what does a *useful* answer look like?
+> The whole thing or just the key part? Step-by-step, or the bottom line first? Short and trust-me, or thorough with the reasoning shown?
 
-## What are things you explicitly do NOT want an agent to do?
-> Hard nos: refactor without being asked, add comments everywhere, use patterns you hate, make assumptions about X.
+## What should an agent never do when working with you?
+> The hard nos — assumptions you hate, patterns you reject, things done without asking, tone that's wrong for you. Be specific; each one becomes a rule.
 
-## How do you approach testing?
-> TDD? Tests after? No tests? What's your philosophy and how strict are you about it in practice?
+## When is something actually *done* — and what's a corner you refuse to cut?
+> Shipped? Tested? Reviewed? Or "works for now"? And the shortcut you've watched others take that you won't.
 
-## What does "done" mean for you on a task?
-> When do you consider something finished — shipped, tested, documented, reviewed, or just "working on my machine"?
+## When something goes wrong or gets stuck, what do you want to happen?
+> Should an agent push through and report back, or stop and surface it immediately? How long should it wrestle with it before checking in with you?
 
-## How do you prefer to handle errors or blockers?
-> Do you want the agent to try to solve it and report back, or surface the issue immediately and ask?
+## Do you want to drive, or be handed a plan?
+> Tight back-and-forth, or "give me the plan and let me run"? When do you want to be consulted versus just shown the finished result?
 
-## What collaboration style works best for you?
-> Highly interactive back-and-forth, or give me a plan and let me execute? Do you prefer to drive or be guided?
+## Describe working with someone who just *got* it. What were they doing?
+> A collaborator or tool that felt effortless to work with. What made the difference — and how could an agent reproduce that for you?

@@ -52,6 +52,59 @@
         "aliases": { "type": "array", "items": { "type": "string" }, "description": "Useful shell aliases worth knowing." }
       }
     },
+    "agents": {
+      "type": "array",
+      "description": "Optional per-agent persona designs. `soul-forge import` routes these into soul-forge.yaml (matched by name); they are NOT stored in profile.json. This is how the rich voice, opinions, boundaries, and example exchanges drawn out of the user during onboarding reach each agent's SOUL.md. A name with no matching agent is appended to the fleet.",
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": { "type": "string", "description": "Agent name; should match an agent in soul-forge.yaml (a new name is appended)." },
+          "role": { "type": "string", "description": "Optional role: coding | infrastructure | orchestrator | research | general. Defaults to 'general' for a newly added agent." },
+          "persona": {
+            "type": "object",
+            "description": "The agent's identity and voice — shapes SOUL.md and IDENTITY.md. Keep it sharp and specific; vague personas are flagged by `soul-forge audit`.",
+            "properties": {
+              "vibe": { "type": "string", "description": "One-line identity card, e.g. 'the codebase's quiet maintainer'." },
+              "emoji": { "type": "string", "description": "Signature emoji for IDENTITY.md." },
+              "backstory": { "type": "string", "description": "One line, e.g. 'a pragmatic engineer who's maintained this codebase for years'." },
+              "voice": { "type": "string", "description": "Tone, e.g. 'dry, precise, allergic to filler'." },
+              "opinions": { "type": "array", "items": { "type": "string" }, "description": "Takes the agent holds — strong opinions, loosely held. The single biggest lever against a generic persona." },
+              "tensions": { "type": "array", "items": { "type": "string" }, "description": "Honest contradictions the agent holds, e.g. 'I prize shipping fast, yet I'll stop the line over a change I can't verify'. Contradictions are what make a persona identifiably itself rather than a flat saint." },
+              "principles": { "type": "array", "items": { "type": "string" }, "description": "Stance/communication posture (NOT operational rules — those are role-driven and land in AGENTS.md)." },
+              "boundaries": { "type": "array", "items": { "type": "string" }, "description": "Integrity lines the agent won't cross, e.g. 'I won't ship a change I can't explain'." },
+              "avoid": { "type": "array", "items": { "type": "string" }, "description": "Stylistic anti-patterns, e.g. 'no certainly! preamble'." },
+              "examples": {
+                "type": "array",
+                "description": "Few-shot exchanges that lock in voice — the highest-leverage field. Include at least one edge/refusal case, not just a happy path.",
+                "items": {
+                  "type": "object",
+                  "required": ["prompt", "response"],
+                  "properties": {
+                    "prompt": { "type": "string", "description": "What the user says." },
+                    "response": { "type": "string", "description": "How this agent answers — in its voice." },
+                    "note": { "type": "string", "description": "Optional calibration: the specific move this example demonstrates, e.g. 'leads with the caveat, not an apology'." }
+                  }
+                }
+              },
+              "counter_examples": {
+                "type": "array",
+                "description": "Negative calibration: exchanges showing how the agent must NOT respond. A bad example with a 'why it fails' note pins down voice as sharply as a good one.",
+                "items": {
+                  "type": "object",
+                  "required": ["prompt", "response"],
+                  "properties": {
+                    "prompt": { "type": "string", "description": "What the user says." },
+                    "response": { "type": "string", "description": "A wrong-voice response to avoid." },
+                    "note": { "type": "string", "description": "Optional: why this response is wrong for this agent." }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "updated_at": { "type": "string", "description": "RFC3339 timestamp of the last update (optional)." }
   }
 }
