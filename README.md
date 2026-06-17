@@ -202,8 +202,12 @@ Generates the OpenClaw/Hermes workspace file set per agent, from your profile an
 | `AGENTS.md` | The agent's operating procedure (SOP): session-start + memory routine, numbered operating rules, scope, security. |
 | `TOOLS.md` | Local tools/environment cheat-sheet — "where things are." Guidance only; env-var names, never secrets. |
 | `MEMORY.md` | Accumulated learnings over time. **Seeded once and never overwritten** on regenerate. |
+| `soul.json` | [SoulSpec](https://github.com/clawsouls/soulspec) manifest: name, version, author, license, framework compatibility, file map. Makes the output an installable package. |
+| `memory/` | Directory for the agent's daily memory logs (`YYYY-MM-DD.md`), referenced by AGENTS.md. |
 
-This matches the [OpenClaw workspace](https://docs.openclaw.ai/concepts/agent-workspace) and [Hermes context-file](https://hermes-agent.nousresearch.com/docs/user-guide/features/personality) conventions: SOUL.md is voice/stance, operational rules live in AGENTS.md (single responsibility, no duplication).
+This matches the [OpenClaw workspace](https://docs.openclaw.ai/concepts/agent-workspace) and [Hermes context-file](https://hermes-agent.nousresearch.com/docs/user-guide/features/personality) conventions: SOUL.md is voice/stance, operational rules live in AGENTS.md (single responsibility, no duplication). The `soul.json` manifest follows [SoulSpec v0.5](https://github.com/clawsouls/soulspec), so a generated agent dir is a valid, installable persona package.
+
+Set `author:` and `license:` at the top of `soul-forge.yaml` to populate the manifest (a publishable package wants a license; `audit` nudges when it's unset).
 
 ```bash
 soul-forge generate --all              # all agents
@@ -232,6 +236,28 @@ Scans for:
 - Tool indicators (tmux, alacritty, kitty, starship, mise, homebrew, etc.)
 
 Output is written to `.soul-forge/dotfiles.json` and also printed to stdout (pipeable).
+
+---
+
+### `soul-forge voice <sample...>`
+
+Scans writing samples and extracts **deterministic stylometry** — sentence rhythm,
+punctuation tics (em-dash habit, exclamation rate), contraction/hedge ratios, lexical
+diversity (MTLD), and distinctive vocabulary — into `.soul-forge/voice.json`, with a
+`candidates` block of suggested `persona.voice` / `.avoid` / `vocabulary` fields.
+
+```bash
+soul-forge voice essays/*.md notes.txt
+```
+
+It **proposes candidates; it never authors the persona** — surface stats overfit and
+models can't reproduce implicit style ([research](https://arxiv.org/abs/2509.14543)), so
+the harness presents these to you for confirmation before any land in `soul-forge.yaml`.
+Aim for **2000+ words across varied samples** (emails, messages, prose); a single source
+yields a register, not a voice, and the scan flags low confidence below that.
+
+Privacy: only derived stats are written — never your raw text. Gitignore
+`.soul-forge/voice.json` if your samples are personal.
 
 ---
 
@@ -350,11 +376,20 @@ soul-forge audit --all || echo "Agent files need updating"
 
 ### `soul-forge rubric`
 
-Emits a deterministic **drift-test** for a persona: probes and scoring criteria
-derived from the agent's own opinions, boundaries, and tensions. soul-forge never
-calls a model, so it can't run the test — it hands you the rubric to run against a
-cheap model (or have your harness run it), scoring how well the agent stays in
-character under pressure. The empirical complement to `audit`.
+Emits a deterministic **drift-test** for a persona: probes, scoring axes, and signal
+lists derived from the agent's own voice/opinions/boundaries/tensions. soul-forge never
+calls a model, so it hands you the rubric to run against a model (or have your harness
+run it). The scoring model is borrowed from aaronjmars/soul.md's weak-model test:
+
+- Each probe scores **Voice** (0–2) + **Stance** (0–2) − **anti-pattern hits**, max 4.
+- The voice / specificity / anti-pattern signal lists are generated *from the persona's
+  own files*, so detection stays deterministic and self-maintaining.
+- **Drift = the gap between a strong and a cheap model** — a persona that scores well
+  only on the strong model is overfit; sharpen the section it slips on.
+- An **adversarial "turns-to-flip"** section pushes back on each boundary/opinion to
+  measure persona collapse under pressure (sycophancy).
+
+The empirical complement to `audit`.
 
 ```bash
 soul-forge rubric --agent coder
@@ -385,10 +420,11 @@ result in `soul-forge.yaml` before generating.
 
 ```
 your-project/
-├── soul-forge.yaml          # Agent fleet config (+ per-agent personas)
+├── soul-forge.yaml          # Agent fleet config (+ per-agent personas, author, license)
 ├── .soul-forge/
 │   ├── profile.json         # Your structured profile (about you)
-│   └── dotfiles.json        # Extracted dotfiles info (optional)
+│   ├── dotfiles.json        # Extracted dotfiles info (optional)
+│   └── voice.json           # Extracted voice signals from writing samples (optional)
 └── agents/
     ├── assistant/
     │   ├── SOUL.md          # who the agent is (voice & stance)
@@ -396,9 +432,11 @@ your-project/
     │   ├── USER.md          # who you are
     │   ├── AGENTS.md        # operating procedure (SOP + memory routine)
     │   ├── TOOLS.md         # local tools/env cheat-sheet
-    │   └── MEMORY.md        # learned over time (preserved on regenerate)
+    │   ├── MEMORY.md        # learned over time (preserved on regenerate)
+    │   ├── soul.json        # SoulSpec manifest (name, version, license, compatibility)
+    │   └── memory/          # daily memory logs (YYYY-MM-DD.md)
     └── coder/
-        └── …                # same six files
+        └── …                # same file set
 ```
 
 ---
