@@ -38,6 +38,7 @@ func init() {
 	rootCmd.AddCommand(questionsCmd)
 	rootCmd.AddCommand(generateCmd)
 	rootCmd.AddCommand(dotfilesCmd)
+	rootCmd.AddCommand(voiceCmd)
 	rootCmd.AddCommand(importCmd)
 	rootCmd.AddCommand(auditCmd)
 	rootCmd.AddCommand(rubricCmd)

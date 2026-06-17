@@ -14,6 +14,11 @@ type Config struct {
 	OutputDir string  `yaml:"output_dir"`
 	Dotfiles  string  `yaml:"dotfiles,omitempty"`
 	Agents    []Agent `yaml:"agents"`
+
+	// Author and License populate the generated soul.json manifest (SoulSpec).
+	// Both optional; a SoulSpec package wants a license, so audit nudges when unset.
+	Author  string `yaml:"author,omitempty"`
+	License string `yaml:"license,omitempty"`
 }
 
 type Agent struct {
