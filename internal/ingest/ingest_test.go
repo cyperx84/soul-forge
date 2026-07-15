@@ -76,10 +76,10 @@ func TestProposeFilenameDecidesKind(t *testing.T) {
 		path string
 		want string
 	}{
-		{"/w/SOUL.md", fragment.KindVoice},
-		{"/w/AGENTS.md", fragment.KindRule},
-		{"/w/IDENTITY.md", fragment.KindIdentity},
-		{"/w/USER.md", fragment.KindFact},
+		{"/Users/c/.openclaw/workspace/SOUL.md", fragment.KindVoice},
+		{"/Users/c/.openclaw/workspace/AGENTS.md", fragment.KindRule},
+		{"/Users/c/.openclaw/workspace/IDENTITY.md", fragment.KindIdentity},
+		{"/Users/c/.openclaw/workspace/USER.md", fragment.KindFact},
 	}
 	for _, tc := range cases {
 		p := Propose(Candidate{Text: "Lead with the outcome.", Path: tc.path, Line: 1}, Options{Host: "m4-mini"})
@@ -96,7 +96,7 @@ func TestProposeFilenameDecidesKind(t *testing.T) {
 // than defaulting. If this test ever "passes" by proposing a certain kind, ingest has
 // started guessing.
 func TestProposeRefusesToDecideMixedFiles(t *testing.T) {
-	for _, path := range []string{"/w/TOOLS.md", "/home/.claude/CLAUDE.md"} {
+	for _, path := range []string{"/Users/c/.openclaw/workspace/TOOLS.md", "/home/.claude/CLAUDE.md"} {
 		p := Propose(Candidate{Text: "Install policy: Homebrew first, UV for Python.", Path: path}, Options{Host: "m4-mini"})
 		if p.Kind.Certain {
 			t.Errorf("%s: kind reported certain — this file mixes rules and facts; deciding it is a guess", path)
@@ -111,7 +111,7 @@ func TestProposeDecidesHostForNonMachineLayerFiles(t *testing.T) {
 	// AGENTS.md is documented as not the per-machine layer, so host:any is decided
 	// by the file's role — the same class of evidence that makes SOUL.md voice.
 	// Refusing here would hand a reviewer every line in the corpus with one answer.
-	p := Propose(Candidate{Text: "Act first, explain after.", Path: "/w/AGENTS.md"}, Options{Host: "m4-mini"})
+	p := Propose(Candidate{Text: "Act first, explain after.", Path: "/Users/c/.openclaw/workspace/AGENTS.md"}, Options{Host: "m4-mini"})
 	if !p.Host.Certain {
 		t.Errorf("host unresolved for an AGENTS.md line with no machine in it: %s", p.Host.Reason)
 	}
@@ -125,7 +125,7 @@ func TestProposeDecidesHostForNonMachineLayerFiles(t *testing.T) {
 func TestProposeRefusesHostForHardwareLines(t *testing.T) {
 	p := Propose(Candidate{
 		Text: "Apple Silicon M4 Mac Mini, 32GB RAM, 228GB SSD — disk chronically tight.",
-		Path: "/w/AGENTS.md",
+		Path: "/Users/c/.openclaw/workspace/AGENTS.md",
 	}, Options{Host: "m4-mini"})
 	if p.Host.Certain {
 		t.Fatal("host reported certain for a line naming hardware — one box's fact would compile to every machine")
@@ -138,7 +138,7 @@ func TestProposeRefusesHostForHardwareLines(t *testing.T) {
 func TestProposeNeverDefaultsHostForToolsFile(t *testing.T) {
 	p := Propose(Candidate{
 		Text: "Never use exec/curl for provider messaging — OpenClaw routes internally.",
-		Path: "/w/TOOLS.md",
+		Path: "/Users/c/.openclaw/workspace/TOOLS.md",
 	}, Options{Host: "m4-mini"})
 
 	if p.Host.Certain {
@@ -150,7 +150,7 @@ func TestProposeNeverDefaultsHostForToolsFile(t *testing.T) {
 }
 
 func TestProposeMemoryIsInstanceLifecycle(t *testing.T) {
-	p := Propose(Candidate{Text: "Fleet vault archived.", Path: "/w/MEMORY.md"}, Options{})
+	p := Propose(Candidate{Text: "Fleet vault archived.", Path: "/Users/c/.openclaw/workspace/MEMORY.md"}, Options{})
 	if p.Lifecycle.Value != fragment.LifecycleInstance || !p.Lifecycle.Certain {
 		t.Fatalf("MEMORY.md lifecycle = %q (certain=%v), want %q certain",
 			p.Lifecycle.Value, p.Lifecycle.Certain, fragment.LifecycleInstance)
@@ -179,7 +179,7 @@ func TestProposeHarnessFromPath(t *testing.T) {
 func TestProposeFlagsNamedAgentWithoutDeciding(t *testing.T) {
 	p := Propose(Candidate{
 		Text: "Klaw orchestrates the fleet from this machine.",
-		Path: "/w/AGENTS.md",
+		Path: "/Users/c/.openclaw/workspace/AGENTS.md",
 	}, Options{Host: "m4-mini", Agents: []string{"klaw", "builder"}})
 
 	if p.Profile.Certain {
@@ -194,7 +194,7 @@ func TestProposeFlagsNamedAgentWithoutDeciding(t *testing.T) {
 // no other path from Proposal to Fragment, so "compiled a guess" is impossible rather
 // than discouraged.
 func TestConfirmRefusesUnresolvedAxis(t *testing.T) {
-	p := Propose(Candidate{Text: "Install policy: Homebrew first.", Path: "/w/TOOLS.md"}, Options{Host: "m4-mini"})
+	p := Propose(Candidate{Text: "Install policy: Homebrew first.", Path: "/Users/c/.openclaw/workspace/TOOLS.md"}, Options{Host: "m4-mini"})
 	if len(p.Unresolved()) == 0 {
 		t.Fatal("precondition failed: TOOLS.md line should have unresolved axes")
 	}
@@ -223,7 +223,7 @@ func TestConfirmRefusesUnresolvedAxis(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Confirm with every axis supplied: %v", err)
 	}
-	if f.Source != "/w/TOOLS.md:0" {
+	if f.Source != "/Users/c/.openclaw/workspace/TOOLS.md:0" {
 		t.Errorf("Source = %q, want the origin line — provenance is the point", f.Source)
 	}
 	if f.Text != "Install policy: Homebrew first." {
@@ -235,7 +235,7 @@ func TestConfirmRefusesUnresolvedAxis(t *testing.T) {
 // not a violation — the failure mode is the machine deciding unasked, not the human
 // deciding differently.
 func TestConfirmAllowsOverridingACertainAxis(t *testing.T) {
-	p := Propose(Candidate{Text: "Lead with the outcome.", Path: "/w/SOUL.md"}, Options{Host: "m4-mini"})
+	p := Propose(Candidate{Text: "Lead with the outcome.", Path: "/Users/c/.openclaw/workspace/SOUL.md"}, Options{Host: "m4-mini"})
 	f, err := p.Confirm("lead-outcome", map[string]string{
 		"kind": fragment.KindRule, // overruling the SOUL.md → voice signal
 		"host": fragment.AxisAny, "profile": fragment.AxisAny, "harness": fragment.AxisAny,
@@ -257,7 +257,7 @@ func TestFlagsCatchWhatAlreadyShippedOnce(t *testing.T) {
 		{"runtime contract", "If no response is needed, reply NO_REPLY.", "names runtime-injected contract"},
 	}
 	for _, tc := range cases {
-		p := Propose(Candidate{Text: tc.text, Path: "/w/AGENTS.md"}, Options{Host: "m4-mini"})
+		p := Propose(Candidate{Text: tc.text, Path: "/Users/c/.openclaw/workspace/AGENTS.md"}, Options{Host: "m4-mini"})
 		if !hasFlag(p.Flags, tc.want) {
 			t.Errorf("%s: flags = %v, want one containing %q", tc.name, p.Flags, tc.want)
 		}

@@ -273,10 +273,62 @@ var runtimeContracts = map[string]map[string]string{
 	},
 }
 
+// mentions marks a line that talks *about* a runtime contract rather than restating
+// it. Both shapes showed up the first time a real corpus was compiled, and neither is
+// a violation:
+//
+//   - "Never restate the runtime. OpenClaw injects … `NO_REPLY` …" — a rule whose
+//     whole job is preventing the violation, failed by the check enforcing it.
+//   - "Never routine status (\"HEARTBEAT_OK\", \"no issues\") — it pollutes everything
+//     downstream" — a memory rule citing the token as an example of what not to log.
+//
+// A restatement *instructs*: it tells the agent to emit the token. A mention refers to
+// the token while instructing something else. That distinction is the actual thing
+// being tested, and no keyword list decides it — this is a heuristic and it will be
+// wrong in both directions.
+//
+// It is acceptable only because the failure directions are wildly asymmetric. A missed
+// restatement costs a few tokens per session. A false positive blocks the entire build,
+// with no override, and the only way out is deleting a correct rule. Between "burns
+// tokens" and "cannot compile", err toward burning tokens — so when the shape is
+// ambiguous, this returns "not a violation".
+var mentions = []string{
+	// Forbidding restatement.
+	"never restate", "don't restate", "do not restate",
+	"never duplicate", "don't duplicate", "do not duplicate",
+	"never repeat", "don't repeat", "do not repeat",
+	"without restating", "instead of restating",
+	// Forbidding the token itself, or citing it as an example.
+	"never routine", "not routine", "never log", "don't log", "do not log",
+	"pollutes", "boilerplate", "wasted", "already inject", "injects the",
+}
+
+// runtimeInjected reports which runtime contract a line restates, or "" if none.
+//
+// A substring match cannot tell a restatement from a line that merely refers to the
+// token — the same shape as ingest's runtime flag asserting "restates" when it had
+// only observed "names", and the same shape as the round-2 citation error: a signal
+// claiming more than it saw. Both real violations of this were found by compiling the
+// actual corpus, not by review, because every fixture until then was written by the
+// same author as the check.
 func runtimeInjected(text, harness string) string {
-	for token, mech := range runtimeContracts[harness] {
+	lower := strings.ToLower(text)
+	for _, m := range mentions {
+		if strings.Contains(lower, m) {
+			return ""
+		}
+	}
+	// Deterministic: map iteration order is random, and a line matching two tokens
+	// would otherwise name a different mechanism per run — a build that fails
+	// differently each time is a build nobody trusts.
+	tokens := make([]string, 0, len(runtimeContracts[harness]))
+	for token := range runtimeContracts[harness] {
+		tokens = append(tokens, token)
+	}
+	sort.Strings(tokens)
+	for _, token := range tokens {
 		if strings.Contains(text, token) {
-			return mech
+			return runtimeContracts[harness][token]
 		}
 	}
 	return ""

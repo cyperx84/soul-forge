@@ -213,3 +213,60 @@ func keys(m map[string]string) []string {
 	}
 	return out
 }
+
+// The invariant-4 check fired on AGENTS.md's own "Never restate the runtime. OpenClaw
+// injects the group-chat, `NO_REPLY`, heartbeat … contracts" — the line whose entire
+// job is preventing the violation, blocked from compiling by the check enforcing it.
+//
+// Found by running the real ingested corpus through Compile for the first time, not
+// by review: every fixture until now was written by the same author as the check, so
+// none of them contained a line that talks *about* the contract. Real text did.
+func TestRuntimeNonDuplicationAllowsProhibitions(t *testing.T) {
+	// Both lines are verbatim from the real AGENTS.md and both failed the build the
+	// first time the ingested corpus was compiled. Neither restates anything: the
+	// first forbids restatement, the second cites the token as an example of what
+	// not to write down.
+	cases := []struct{ id, text string }{
+		{"never-restate-runtime",
+			"Never restate the runtime. OpenClaw injects the group-chat, `NO_REPLY`, heartbeat, messaging, and model-alias contracts — but only on full prompts; sub-agents run `minimal` and get none of them."},
+		{"daily-log-scope",
+			"`memory/YYYY-MM-DD.md` — raw daily chronology. Events, decisions, blockers, temp references. Never routine status (\"HEARTBEAT_OK\", \"no issues\", session boilerplate) — it pollutes everything downstream."},
+	}
+	for _, tc := range cases {
+		corpus := []fragment.Fragment{{
+			ID: tc.id, Text: tc.text,
+			Host: fragment.AxisAny, Profile: fragment.AxisAny,
+			Harness: fragment.HarnessOpenClaw, Lifecycle: fragment.LifecycleAuthored,
+			Kind: fragment.KindRule,
+		}}
+		_, err := compile.Compile(corpus, compile.Target{
+			Name:     "openclaw-hub",
+			Selector: fragment.Selector{Host: "m4-mini", Profile: "klaw", Harness: fragment.HarnessOpenClaw},
+		})
+		if err != nil {
+			t.Errorf("%s: a rule that refers to the contract without restating it failed the build: %v", tc.id, err)
+		}
+	}
+}
+
+// The other direction, pinned so the prohibition escape hatch cannot quietly disable
+// the invariant: a line that actually restates the contract still fails the build.
+func TestRuntimeNonDuplicationStillCatchesRestatement(t *testing.T) {
+	corpus := []fragment.Fragment{{
+		ID:   "reply-no-reply",
+		Text: "If no response is needed, reply with exactly `NO_REPLY` and nothing else.",
+		Host: fragment.AxisAny, Profile: fragment.AxisAny,
+		Harness: fragment.HarnessOpenClaw, Lifecycle: fragment.LifecycleAuthored,
+		Kind: fragment.KindRule,
+	}}
+	_, err := compile.Compile(corpus, compile.Target{
+		Name:     "openclaw-hub",
+		Selector: fragment.Selector{Host: "m4-mini", Profile: "klaw", Harness: fragment.HarnessOpenClaw},
+	})
+	if err == nil {
+		t.Fatal("a line restating NO_REPLY mechanics compiled — invariant 4 is dead")
+	}
+	if !strings.Contains(err.Error(), "runtime-non-duplication") {
+		t.Fatalf("wrong error: %v", err)
+	}
+}
