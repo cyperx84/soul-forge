@@ -23,11 +23,12 @@ import (
 // abandoned tool.
 
 var (
-	reviewHost     string
-	reviewAgents   []string
-	reviewAnswers  string
-	reviewOutput   string
-	reviewShowLine bool
+	reviewHost      string
+	reviewAgents    []string
+	reviewAnswers   string
+	reviewOutput    string
+	reviewShowLine  bool
+	reviewInterview bool
 )
 
 var reviewCmd = &cobra.Command{
@@ -53,6 +54,7 @@ func init() {
 	reviewCmd.Flags().StringVar(&reviewAnswers, "answers", "", "path to a filled-in answers file; emits fragments instead of questions")
 	reviewCmd.Flags().StringVar(&reviewOutput, "out", "", "write output here instead of stdout")
 	reviewCmd.Flags().BoolVar(&reviewShowLine, "lines", false, "show every member line of each batch, not just the first two")
+	reviewCmd.Flags().BoolVar(&reviewInterview, "interview", false, "emit a voice-interviewer brief (markdown) instead of the questionnaire JSON")
 }
 
 // Question is one batch rendered for a reviewer: what is being asked, why it could
@@ -100,10 +102,31 @@ func runReview(cmd *cobra.Command, args []string) error {
 	}
 	batches := ingest.Batches(proposals)
 
-	if reviewAnswers == "" {
-		return emitQuestions(cmd, proposals, batches)
+	if reviewAnswers != "" {
+		if reviewInterview {
+			return fmt.Errorf("--interview emits questions; it cannot be combined with --answers")
+		}
+		return applyAnswers(cmd, batches)
 	}
-	return applyAnswers(cmd, batches)
+	if reviewInterview {
+		w := cmd.OutOrStdout()
+		if reviewOutput != "" {
+			f, err := os.Create(reviewOutput)
+			if err != nil {
+				return err
+			}
+			defer f.Close()
+			w = f
+		}
+		if err := emitInterview(w, proposals, batches, reviewHost, reviewAgents); err != nil {
+			return err
+		}
+		if reviewOutput != "" {
+			fmt.Fprintf(cmd.ErrOrStderr(), "interview brief: %d questions → %s\n", len(batches), reviewOutput)
+		}
+		return nil
+	}
+	return emitQuestions(cmd, proposals, batches)
 }
 
 func proposeAll(files []string, opts ingest.Options) ([]ingest.Proposal, error) {
