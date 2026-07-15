@@ -245,15 +245,6 @@ func TestApplyPropagatesValidationFailure(t *testing.T) {
 	}
 }
 
-func contains(xs []string, want string) bool {
-	for _, x := range xs {
-		if x == want {
-			return true
-		}
-	}
-	return false
-}
-
 func TestBatchReasonsSurviveDeduplication(t *testing.T) {
 	ps := []Proposal{
 		Propose(Candidate{Text: "Klaw orchestrates the fleet.", Path: "/Users/c/.openclaw/workspace/AGENTS.md", Line: 1, Section: "Role"},

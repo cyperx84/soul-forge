@@ -31,6 +31,18 @@ type Tag struct {
 type Proposal struct {
 	Candidate Candidate
 
+	// Absorbed are the other lines a confirmed merge folded into this proposal;
+	// Candidate is the primary. Provenance is the whole point, so a merged fragment
+	// names every line it came from — dropping the second origin would hide that the
+	// rule was hand-synced across two files, which is the thing being killed.
+	Absorbed []Candidate
+
+	// MergedText is the reviewer-authored line for a merge whose members were worded
+	// differently. Empty means Candidate.Text stands. It is separate from
+	// Candidate.Text because Candidate is provenance: a line reporting what is at
+	// TOOLS.md:31 must keep saying what is actually at TOOLS.md:31.
+	MergedText string
+
 	Host      Tag
 	Profile   Tag
 	Harness   Tag
@@ -41,6 +53,23 @@ type Proposal struct {
 	// names hardware while proposed host:any, a line that restates runtime-injected
 	// contract, a suspected secret.
 	Flags []string
+}
+
+// Line is the text this proposal contributes to a fragment.
+func (p Proposal) Line() string {
+	if p.MergedText != "" {
+		return p.MergedText
+	}
+	return p.Candidate.Text
+}
+
+// Origins lists every source line behind this proposal, primary first.
+func (p Proposal) Origins() []string {
+	out := []string{p.Candidate.Origin()}
+	for _, c := range p.Absorbed {
+		out = append(out, c.Origin())
+	}
+	return out
 }
 
 // Unresolved lists the axes no signal decided. A reviewer confirming a proposal only
@@ -83,8 +112,8 @@ func (p Proposal) Confirm(id string, overrides map[string]string) (fragment.Frag
 
 	f := fragment.Fragment{
 		ID:     id,
-		Text:   p.Candidate.Text,
-		Source: p.Candidate.Origin(),
+		Text:   p.Line(),
+		Source: strings.Join(p.Origins(), ", "),
 	}
 	var err error
 	if f.Host, err = pick("host", p.Host); err != nil {
@@ -133,7 +162,7 @@ func Propose(c Candidate, opts Options) Proposal {
 
 	p.Harness = proposeHarness(c.Path)
 	p.Lifecycle = proposeLifecycle(base)
-	p.Kind = proposeKind(base, c.Section)
+	p.Kind = proposeKind(base, p.Harness.Value)
 	p.Profile = proposeProfile(base, c.Text, opts)
 	p.Host = proposeHost(base, c.Text, opts)
 	p.Flags = flag(c, p)
@@ -175,16 +204,29 @@ func proposeLifecycle(base string) Tag {
 	return Tag{fragment.LifecycleAuthored, "not a runtime-written file", true}
 }
 
-// proposeKind reads the filename, because each harness's docs assign its files a role.
+// proposeKind reads the filename *and* the harness, because a filename only means
+// what the harness around it says it means.
 //
-// Two files resolve to nothing on purpose. TOOLS.md is documented as "local tool
+// A filename alone is not the signal it looks like. SOUL.md is voice under OpenClaw
+// because AGENTS.md sits beside it holding the rules; Hermes has no home-level
+// AGENTS.md and cannot have one — its loader only scans the working directory tree,
+// explicitly to stop "cross-agent context contamination" (subdirectory_hints.py:
+// 169-176). So ~/.hermes/SOUL.md is that harness's only authored slot and carries
+// doctrine and voice together. Reading the name as "voice, certain" there would tag
+// every Hermes rule as voice and route it away from the rules it is.
+//
+// Three files resolve to nothing on purpose. TOOLS.md is documented as "local tool
 // conventions… only guidance" (agent-workspace.md:75) — conventions *and* facts, so
 // the file cannot decide the kind. CLAUDE.md is one sectioned file holding everything
-// Claude Code needs, so it decides even less. Those are the files whose lines need a
-// human, and saying so is the honest output.
-func proposeKind(base, section string) Tag {
+// Claude Code needs, so it decides even less. Hermes' SOUL.md is the third, for the
+// reason above. Those are the files whose lines need a human, and saying so is the
+// honest output.
+func proposeKind(base, harness string) Tag {
 	switch base {
 	case "SOUL.md":
+		if harness == fragment.HarnessHermes {
+			return Tag{fragment.KindVoice, "hermes SOUL.md is the only home-level authored slot; it carries voice and doctrine together (subdirectory_hints.py:169-176)", false}
+		}
 		return Tag{fragment.KindVoice, "SOUL.md is voice and stance (concepts/soul.md)", true}
 	case "IDENTITY.md":
 		return Tag{fragment.KindIdentity, "IDENTITY.md is the agent's role card", true}

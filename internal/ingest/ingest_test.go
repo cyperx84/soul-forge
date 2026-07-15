@@ -92,6 +92,29 @@ func TestProposeFilenameDecidesKind(t *testing.T) {
 	}
 }
 
+// A filename only means what the harness around it says it means.
+//
+// SOUL.md is voice under OpenClaw *because* AGENTS.md sits beside it holding the
+// rules. Hermes has no home-level AGENTS.md and cannot have one — its loader scans
+// only the working directory tree, explicitly to prevent "cross-agent context
+// contamination" (subdirectory_hints.py:169-176) — so its SOUL.md is the only
+// authored slot it has and carries doctrine and voice together.
+//
+// Reading the basename alone tags every Hermes rule kind:voice with full certainty,
+// and a rule tagged voice routes away from the rules. This is the same shape as the
+// bug the whole model exists to kill: a signal asserting more than it saw.
+func TestProposeKindReadsTheHarnessNotJustTheFilename(t *testing.T) {
+	openclaw := Propose(Candidate{Text: "Secrets never enter git.", Path: "/Users/c/.openclaw/workspace/SOUL.md", Line: 4}, Options{Host: "m4-mini"})
+	if !openclaw.Kind.Certain || openclaw.Kind.Value != fragment.KindVoice {
+		t.Errorf("openclaw SOUL.md: kind = %q certain=%v, want voice/certain — AGENTS.md holds the rules beside it", openclaw.Kind.Value, openclaw.Kind.Certain)
+	}
+
+	hermes := Propose(Candidate{Text: "Secrets never enter git.", Path: "/Users/c/.hermes/SOUL.md", Line: 4}, Options{Host: "m4-mini"})
+	if hermes.Kind.Certain {
+		t.Error("hermes SOUL.md: kind reported certain — it is the harness's only authored slot and mixes voice with doctrine; deciding it from the filename is a guess")
+	}
+}
+
 // TOOLS.md and CLAUDE.md genuinely mix kinds, and the honest output says so rather
 // than defaulting. If this test ever "passes" by proposing a certain kind, ingest has
 // started guessing.
