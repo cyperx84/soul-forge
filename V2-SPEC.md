@@ -76,7 +76,7 @@ Target specs baked in from harness docs, not guesses:
 | `openclaw-hub` | AGENTS.md SOUL.md USER.md IDENTITY.md TOOLS.md MEMORY.md(skeleton) HEARTBEAT.md | openclaw docs: concepts/agent-workspace, concepts/soul ("AGENTS.md = operating rules, SOUL.md = voice/stance/style"), standing-orders |
 | `openclaw-worker` | same set; selector swaps `profile:<agent>`, inherits every `profile:any` rule | same |
 | `claude-global` | ~/.claude/CLAUDE.md — selector `harness:any|claude`, `kind:rule|fact`; **no `kind:voice`** (pure tool, Chris's call) | Claude Code memory docs |
-| `hermes` | ~/.hermes/SOUL.md (identity slot, stable tier) + USER.md | hermes source: agent/system_prompt.py three-tier model |
+| `hermes` | ~/.hermes/SOUL.md **only** — and it carries `kind:rule` as well as `kind:voice` (see below). Never USER.md. | hermes source: `agent/system_prompt.py:150-162`, `agent/subdirectory_hints.py:169-176`, `tools/memory_tool.py:189,284,309` |
 | `codex-global` | ~/.codex/AGENTS.md | codex AGENTS.md convention |
 | `generic` | soul.md / AGENTS.md pair | agents.md convention |
 
@@ -88,7 +88,15 @@ A render map answers one question per target: given a selected fragment, which f
 
 `openclaw`: `kind:rule` → AGENTS.md · `host:<this machine>` → TOOLS.md · `kind:voice` → SOUL.md · `profile:user` → USER.md · `kind:identity` → IDENTITY.md · `lifecycle:instance` → MEMORY.md (skeleton only, never overwritten).
 
-`claude-global`: every selected fragment renders into one sectioned file. `hermes`: SOUL.md (identity slot, stable tier) + USER.md. `codex-global`: AGENTS.md.
+`claude-global`: every selected fragment renders into one sectioned file. `codex-global`: AGENTS.md.
+
+`hermes`: SOUL.md only — and it is the case that proves render maps have to exist.
+
+Hermes has exactly one home-level authored slot. `system_prompt.py:150-162` loads SOUL.md as the stable tier's first part, falling back to a hardcoded `DEFAULT_AGENT_IDENTITY` when it is empty. There is no home AGENTS.md and there cannot be one: `subdirectory_hints.py:169-176` only scans within the working directory tree, and says why — *"This prevents loading AGENTS.md from outside the active workspace (e.g. ~/.codex/AGENTS.md, ~/.claude/CLAUDE.md), which causes cross-agent context contamination and instruction mixup."*
+
+So the hermes map routes **`kind:rule` into SOUL.md alongside `kind:voice`**, and that is not a contradiction of "SOUL.md is voice only". That rule is an *OpenClaw* rule, true because OpenClaw injects AGENTS.md next to SOUL.md. Hermes has no such neighbour. The file name is identical and the correct content is not — which is exactly why ownership cannot live in a filename. Copying OpenClaw's SOUL.md to `~/.hermes/SOUL.md` would deliver voice and zero doctrine: every red line silently absent. It is the sub-agent self-sufficiency bug (invariant 2) in a different costume — content is only correct relative to what gets injected beside it.
+
+**`hermes` must never emit USER.md.** `~/.hermes/memories/USER.md` is agent-written at runtime — `tools/memory_tool.py` reads it at `:189`, resolves its path at `:284`, and writes it via `save_to_disk` at `:309`. It is `lifecycle:instance`, so compiling it would clobber real accreted memory and violate invariant 3. The first draft of this table listed it as a compile output; that was a spec bug, caught by reading the source rather than the file names.
 
 Same fragments, different maps. That a machine fact renders to TOOLS.md on OpenClaw and to a section of CLAUDE.md on Claude Code is the map's job, not the author's.
 
