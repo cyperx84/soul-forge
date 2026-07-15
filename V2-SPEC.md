@@ -156,8 +156,18 @@ Order, and the first item is not negotiable:
 3. Render maps + target specs, doc-cited. ✅ `internal/compile/render.go` — openclaw (7-file layout) + claude-global (one sectioned file, no `kind:voice`).
 4. `compile` for `openclaw-hub` + `claude-global`, green against (1). ✅ All five invariants enforced as build failures. Verified by mutation testing, not just green ticks: disabling `no-secrets` and making profile-matching permissive each make the relevant test fail by name.
 5. `diff`. ✅ `internal/compile/diff.go` — compiles, compares against disk, exit-signal via `Report.HasDrift()`. Read-only (pinned by test). Status is decided on raw bytes, never a line set: reordering a rules file changes what an agent reads first, and precedence is meaning; the line-set comparison only *explains* a drift. Skeleton paths (`lifecycle:instance`) report `skeleton`, never drift — invariant 3, pinned both ways: contents are immune, absence is not. An unreadable file is an error, never `missing` — the one direction where a wrong answer sends `apply` to write over content it never read. Mutation-tested: line-set status, skeleton comparison, swallowed read errors, and an always-false `HasDrift` each fail a test by name.
-6. `ingest` — the migration.
+6. `ingest` — the migration. ✅ `internal/ingest` + `cmd/ingest.go`. Extract (markdown → candidate lines, fenced code never becomes a rule), Propose (tags from deterministic signals, each carrying its evidence), Duplicates (IDF-weighted cosine over rare shared terms). Proposals are not Fragments and `Confirm` is the only path between them — it errors on any axis no signal decided, so a compiled guess is impossible rather than discouraged. **Ranking is the contract; the score is not** — IDF is computed from the ingested set, so the same two lines score differently depending on what else was ingested beside them. The first cut took a `threshold` defaulting to 0.15 and cut the real done-vs-attempted duplicate at 0.137 while ranking it #3 correctly the whole time; an absolute cutoff on a relative number is a green tick measuring nothing. Now a `floor` that bounds list length, documented as no kind of similarity judgment.
 7. `audit` fragment rules, `clone`, interview polish.
+
+### Exam result (2026-07-15)
+
+`ingest ~/.openclaw/workspace ~/.claude/CLAUDE.md` → 8 files, 144 candidate lines, 889 ranked pairs. **The top 12 are all real cross-file duplicates and two are byte-identical.** It reproduced the hand-found map and extended it: two LLM cross-review rounds found three duplicates inside the workspace; ingest found the whole CLAUDE.md↔workspace hand-sync layer mechanically, in one pass, which is the drift CLAUDE.md's own header admits to in writing.
+
+The model holds. Reality did not require a fourth matrix.
+
+Same-file pairs rank far weaker and are mostly adjacent lines sharing context — the cross-file signal is where the value is, and the honest reading is that this method finds hand-sync between owners much better than restatement within one owner.
+
+**The review bill is the risk, and it is now measured rather than assumed:** 15 of 144 lines resolve on signal alone; `profile` is unresolved on 129. That is not a defect to tune away — AGENTS.md genuinely holds both `profile:any` doctrine and `profile:klaw` rules, and that ambiguity is precisely what broke matrix v2. It is the judgment step, it lands on a human, and it is the moment this migration either completes or gets abandoned. Batch it by file with proposals pre-filled so the reviewer is approving, not authoring.
 
 Ship compile+diff first; ingest second; interview last.
 
