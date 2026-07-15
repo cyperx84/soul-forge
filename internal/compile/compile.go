@@ -11,17 +11,12 @@
 package compile
 
 import (
-	"errors"
 	"fmt"
 	"sort"
 	"strings"
 
 	"github.com/cyperx84/soul-forge/internal/fragment"
 )
-
-// ErrNotImplemented is retained so callers written against the stub get a clear
-// signal rather than a silent behaviour change. Compile no longer returns it.
-var ErrNotImplemented = errors.New("compile: not implemented")
 
 // Target is one compile destination: a concrete point in scope space plus the
 // harness layout to render into.

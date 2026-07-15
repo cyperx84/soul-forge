@@ -155,7 +155,7 @@ Order, and the first item is not negotiable:
 2. Scope selectors + `extends` inheritance (prime → machine → agent). ✅ `internal/fragment/corpus.go` — Resolve() flattens the chain root-first; overrides take the parent's position (a redefinition, not a re-prioritisation) and are *reported*, never silent; extends-cycle detection; a parent fragment can never be silently dropped (pinned by test).
 3. Render maps + target specs, doc-cited. ✅ `internal/compile/render.go` — openclaw (7-file layout) + claude-global (one sectioned file, no `kind:voice`).
 4. `compile` for `openclaw-hub` + `claude-global`, green against (1). ✅ All five invariants enforced as build failures. Verified by mutation testing, not just green ticks: disabling `no-secrets` and making profile-matching permissive each make the relevant test fail by name.
-5. `diff`.
+5. `diff`. ✅ `internal/compile/diff.go` — compiles, compares against disk, exit-signal via `Report.HasDrift()`. Read-only (pinned by test). Status is decided on raw bytes, never a line set: reordering a rules file changes what an agent reads first, and precedence is meaning; the line-set comparison only *explains* a drift. Skeleton paths (`lifecycle:instance`) report `skeleton`, never drift — invariant 3, pinned both ways: contents are immune, absence is not. An unreadable file is an error, never `missing` — the one direction where a wrong answer sends `apply` to write over content it never read. Mutation-tested: line-set status, skeleton comparison, swallowed read errors, and an always-false `HasDrift` each fail a test by name.
 6. `ingest` — the migration.
 7. `audit` fragment rules, `clone`, interview polish.
 

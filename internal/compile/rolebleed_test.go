@@ -1,18 +1,17 @@
-// This test ships red. That is the point.
+// The role-bleed regression test.
 //
-// V2-SPEC.md pins it as build step 1, before the compiler exists: it is the
-// regression test for the break that killed the hand-built ownership matrix, and it
-// is the reason the data model changed. Writing it first means the compiler is
-// judged against it rather than negotiated with it.
+// V2-SPEC.md pinned it as build step 1 and it shipped red, before the compiler
+// existed: it is the regression test for the break that killed the hand-built
+// ownership matrix, and it is the reason the data model changed. Writing it first
+// meant the compiler was judged against it rather than negotiated with it. Step 4
+// made it green.
 //
-// Expect: FAIL with compile.ErrNotImplemented until internal/compile is written.
-// It goes green when the compiler correctly refuses to leak scope, and never by
+// It stays green only while the compiler refuses to leak scope, and never by
 // weakening what it asserts.
 
 package compile_test
 
 import (
-	"errors"
 	"strings"
 	"testing"
 
@@ -168,14 +167,4 @@ func textOf(t *testing.T, id string) string {
 	}
 	t.Fatalf("test bug: no fragment %q in corpus", id)
 	return ""
-}
-
-// TestCompileStubIsTheReason documents why the tests above are red, so a future
-// reader hits an explanation instead of a mystery. Delete it with the stub.
-func TestCompileStubIsTheReason(t *testing.T) {
-	_, err := compile.Compile(corpus(), builderOnM1())
-	if !errors.Is(err, compile.ErrNotImplemented) {
-		t.Skip("compiler implemented — the invariant tests above are now the real signal")
-	}
-	t.Log("compile is a stub; the invariant tests above are red by design (V2-SPEC.md build order)")
 }
