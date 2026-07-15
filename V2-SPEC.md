@@ -10,7 +10,15 @@ v1 is a persona generator: interview → profile → opinionated SOUL.md persona
 
 v2 is an **agent-file compiler**: one profile source of truth → every guidance file on every machine, for every harness — aligned to the user, backed by each harness's official docs, deduplicated by construction, drift-detected by diff.
 
-Personas are out. Chris's call, verbatim intent: agents are tools with voices, not characters. `kind:voice` fragments carry tone, bluntness, opinions, boundaries — no creature bios, no "you're becoming someone," no example-dialogue theater. `generate`'s persona-depth machinery (tensions, calibration, predictiveness) is deleted or demoted to an off-by-default flag.
+Personas are out. Chris's call, verbatim intent: agents are tools with voices, not characters. `kind:voice` fragments carry tone, bluntness, opinions, boundaries — no creature bios, no "you're becoming someone," no example-dialogue theater.
+
+### Persona removal is a hard break (decided 2026-07-15)
+
+The persona machinery is not on a branch to abandon — it is **live on main and shipped** via brew/npm: `cmd/rubric.go`, `internal/rubric/`, `internal/soulmd/`, plus `tensions`/`calibration`/`predictiveness` in `internal/schema/profile.schema.json`, `internal/config`, and templates. `rubric`'s own help text says it scores *"how well the agent stays in character"* — the model this spec rejects, running in a published tool.
+
+So v2 is a breaking change to published surface, not a cleanup. Chris's call: **hard break, major version bump, no deprecation shim.** Rationale: the tool is v0.x, the persona surface contradicts the tool's own stated purpose, and carrying a compatibility shim for machinery nobody should use costs more than the break. `generate`'s persona-depth machinery is deleted outright — not demoted to an off-by-default flag.
+
+Version number is a release-time decision, deliberately not pinned here. Note the naming collision for whoever picks it: the ownership matrix is on its **v3**, this spec file is named **V2-SPEC**, and the shipped tool is **v0.1.0**. Three unrelated "v" numbers. The matrix version is a design-history label and has no business becoming the tool's tag.
 
 ## The fragment model (core data model)
 
@@ -135,7 +143,7 @@ Go codebase stays (cmd/ + internal/, goreleaser, brew+npm+go install paths all w
 
 Order, and the first item is not negotiable:
 
-1. **Fragment schema + the role-bleed invariant test, red.** Compile Builder-on-M1, assert no `profile:klaw` / no `host:m4-mini` bleed. Write it failing before the compiler exists. Every later feature is judged against it.
+1. **Fragment schema + the role-bleed invariant test, red.** ✅ done (branch `v2`). `internal/fragment` (schema, four axes, selector, validation — green) + `internal/compile` (API surface, stub, invariant tests red on `ErrNotImplemented`). Red lives on branch `v2`, not main: CI runs on main pushes and PRs, and a red main is a worse default than a red branch. The test corpus is built from the lines that actually broke — `klaw-orchestrates`, `m4-disk-tight` — not invented fixtures. Asserts both halves: no bleed in, and no over-filtering (an invariant that passes by emitting nothing is a broken compiler, not a passing test).
 2. Scope selectors + `extends` inheritance (prime → machine → agent).
 3. Render maps + target specs, doc-cited.
 4. `compile` for `openclaw-hub` + `claude-global`, green against (1), golden-file tests.
