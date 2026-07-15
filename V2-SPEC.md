@@ -143,10 +143,10 @@ Go codebase stays (cmd/ + internal/, goreleaser, brew+npm+go install paths all w
 
 Order, and the first item is not negotiable:
 
-1. **Fragment schema + the role-bleed invariant test, red.** ✅ done (branch `v2`). `internal/fragment` (schema, four axes, selector, validation — green) + `internal/compile` (API surface, stub, invariant tests red on `ErrNotImplemented`). Red lives on branch `v2`, not main: CI runs on main pushes and PRs, and a red main is a worse default than a red branch. The test corpus is built from the lines that actually broke — `klaw-orchestrates`, `m4-disk-tight` — not invented fixtures. Asserts both halves: no bleed in, and no over-filtering (an invariant that passes by emitting nothing is a broken compiler, not a passing test).
-2. Scope selectors + `extends` inheritance (prime → machine → agent).
-3. Render maps + target specs, doc-cited.
-4. `compile` for `openclaw-hub` + `claude-global`, green against (1), golden-file tests.
+1. **Fragment schema + the role-bleed invariant test, red.** ✅ done, then made green by step 4 (branch `v2`). `internal/fragment` (schema, four axes, selector, validation — green) + `internal/compile` (API surface, stub, invariant tests red on `ErrNotImplemented`). Red lives on branch `v2`, not main: CI runs on main pushes and PRs, and a red main is a worse default than a red branch. The test corpus is built from the lines that actually broke — `klaw-orchestrates`, `m4-disk-tight` — not invented fixtures. Asserts both halves: no bleed in, and no over-filtering (an invariant that passes by emitting nothing is a broken compiler, not a passing test).
+2. Scope selectors + `extends` inheritance (prime → machine → agent). ✅ `internal/fragment/corpus.go` — Resolve() flattens the chain root-first; overrides take the parent's position (a redefinition, not a re-prioritisation) and are *reported*, never silent; extends-cycle detection; a parent fragment can never be silently dropped (pinned by test).
+3. Render maps + target specs, doc-cited. ✅ `internal/compile/render.go` — openclaw (7-file layout) + claude-global (one sectioned file, no `kind:voice`).
+4. `compile` for `openclaw-hub` + `claude-global`, green against (1). ✅ All five invariants enforced as build failures. Verified by mutation testing, not just green ticks: disabling `no-secrets` and making profile-matching permissive each make the relevant test fail by name.
 5. `diff`.
 6. `ingest` — the migration.
 7. `audit` fragment rules, `clone`, interview polish.
