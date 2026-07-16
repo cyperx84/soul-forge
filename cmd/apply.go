@@ -219,31 +219,37 @@ type targetDef struct {
 	Harness string `json:"harness"`
 }
 
-// resolveTarget builds the compile target from flags: either an ad-hoc
-// (--host, --profile, --harness) triple, or --target looked up in --targets.
+// resolveTarget builds apply's compile target from its flags.
 func resolveTarget() (compile.Target, error) {
-	adHoc := applyHost != "" || applyProfile != "" || applyHarness != ""
-	named := applyTarget != "" || applyTargets != ""
+	return resolveTargetFrom(applyTarget, applyTargets, applyHost, applyProfile, applyHarness)
+}
+
+// resolveTargetFrom builds a compile target from either an ad-hoc
+// (host, profile, harness) triple or a name looked up in a targets file.
+// Shared by every command that compiles.
+func resolveTargetFrom(name, targetsFile, host, profile, harness string) (compile.Target, error) {
+	adHoc := host != "" || profile != "" || harness != ""
+	named := name != "" || targetsFile != ""
 
 	switch {
 	case adHoc && named:
 		return compile.Target{}, fmt.Errorf("use either --host/--profile/--harness or --targets/--target, not both")
 	case adHoc:
-		if applyHost == "" || applyProfile == "" || applyHarness == "" {
+		if host == "" || profile == "" || harness == "" {
 			return compile.Target{}, fmt.Errorf("an ad-hoc target needs all three of --host, --profile, --harness")
 		}
 		return compile.Target{
-			Name:     fmt.Sprintf("%s/%s/%s", applyHost, applyProfile, applyHarness),
-			Selector: fragment.Selector{Host: applyHost, Profile: applyProfile, Harness: applyHarness},
+			Name:     fmt.Sprintf("%s/%s/%s", host, profile, harness),
+			Selector: fragment.Selector{Host: host, Profile: profile, Harness: harness},
 		}, nil
-	case applyTarget != "" && applyTargets != "":
-		defs, err := loadTargets(applyTargets)
+	case name != "" && targetsFile != "":
+		defs, err := loadTargets(targetsFile)
 		if err != nil {
 			return compile.Target{}, err
 		}
 		var known []string
 		for _, d := range defs {
-			if d.Name == applyTarget {
+			if d.Name == name {
 				return compile.Target{
 					Name:     d.Name,
 					Selector: fragment.Selector{Host: d.Host, Profile: d.Profile, Harness: d.Harness},
@@ -253,7 +259,7 @@ func resolveTarget() (compile.Target, error) {
 		}
 		// Unknown names are an error listing the known ones. Defaulting to the first
 		// entry would write a typo'd target's output into a real workspace.
-		return compile.Target{}, fmt.Errorf("target %q not in %s (known: %s)", applyTarget, applyTargets, strings.Join(known, ", "))
+		return compile.Target{}, fmt.Errorf("target %q not in %s (known: %s)", name, targetsFile, strings.Join(known, ", "))
 	default:
 		return compile.Target{}, fmt.Errorf("no target: pass --host/--profile/--harness, or --targets <file> with --target <name>")
 	}
