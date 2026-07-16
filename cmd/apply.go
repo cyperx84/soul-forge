@@ -192,21 +192,44 @@ func countDestructive(p compile.ApplyPlan) int {
 // loadCorpus reads a fragment corpus and validates every fragment before anything is
 // compiled from it. An invalid fragment reaching Compile would fail an invariant with
 // a message about scope; failing here says the file is malformed, which is the truth.
+//
+// Two formats are accepted: a flat fragment array (what onboard and review emit) and
+// a profile object with an extends chain (what clone emits). A loader accepting only
+// one would orphan the other command's output.
 func loadCorpus(path string) ([]fragment.Fragment, error) {
+	frags, _, err := loadCorpusWithOverrides(path)
+	return frags, err
+}
+
+// loadCorpusWithOverrides is loadCorpus plus the override records a profile chain
+// produced. Only audit consumes the overrides — a downstream box changing inherited
+// doctrine is worth a report, not a failure.
+func loadCorpusWithOverrides(path string) ([]fragment.Fragment, []fragment.Override, error) {
 	b, err := os.ReadFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("corpus: %w", err)
+		return nil, nil, fmt.Errorf("corpus: %w", err)
+	}
+	if fragment.IsProfileFile(b) {
+		c, err := fragment.LoadProfile(path)
+		if err != nil {
+			return nil, nil, err
+		}
+		frags, overrides, err := c.Resolve() // Resolve validates every fragment
+		if err != nil {
+			return nil, nil, fmt.Errorf("corpus %s: %w", path, err)
+		}
+		return frags, overrides, nil
 	}
 	var frags []fragment.Fragment
 	if err := json.Unmarshal(b, &frags); err != nil {
-		return nil, fmt.Errorf("corpus %s: %w", path, err)
+		return nil, nil, fmt.Errorf("corpus %s: %w", path, err)
 	}
 	for i, f := range frags {
 		if err := f.Validate(); err != nil {
-			return nil, fmt.Errorf("corpus %s: fragment %d (%s): %w", path, i, f.ID, err)
+			return nil, nil, fmt.Errorf("corpus %s: fragment %d (%s): %w", path, i, f.ID, err)
 		}
 	}
-	return frags, nil
+	return frags, nil, nil
 }
 
 // targetDef is one entry in a --targets file. Targets are user data, not tool

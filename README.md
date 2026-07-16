@@ -96,6 +96,40 @@ soul-forge apply --corpus corpus.json --root ... --targets targets.json --target
 
 There are no built-in targets on purpose: a default target is somebody's setup baked into the tool, and writing it lands in a real workspace.
 
+## Audit
+
+```bash
+# Advisory lint — exit 0 clean, 1 warnings (--strict: any finding), 2 error
+soul-forge audit corpus.json --targets targets.json --provenance
+```
+
+Reports what shouldn't stop a build but will rot one: duplicate fragments (same
+text, two ids — the hand-sync surviving inside the corpus), current-project state
+pinned where it goes stale, rules that say "as appropriate", harness-behavior
+claims with no `source:` citation, `any` tags that only ever reach one target,
+and files nearing their byte budget.
+
+## Provision a new machine or agent
+
+Profiles are corpus files with inheritance: `{"name": ..., "extends": <parent>, "fragments": [...]}`.
+Every command that takes `--corpus` accepts either format.
+
+```bash
+# prime.json holds your universal fragments. Derive a machine, then an agent:
+soul-forge clone prime.json --as m1 \
+  --set  "disk-space=Disk is roomy on this box." \
+  --retag "disk-space=host:m1"
+soul-forge clone m1.json --as builder
+
+# builder.json compiles with every prime rule, m1's overrides, zero copied text
+soul-forge apply --corpus builder.json --root ... --host m1 --profile builder --harness openclaw
+```
+
+A clone starts empty — inheritance carries the parent's fragments, so a fix in
+prime reaches every downstream box on its next compile. Overrides are recorded
+and reported by `audit`, never silent. The `extends` path is relative, so the
+profile tree survives being copied onto the machine it provisions.
+
 ## Safety properties
 
 - `apply` is dry-run by default; `--commit` writes, `--force` gates overwrites, backups are on unless `--no-backup`.
