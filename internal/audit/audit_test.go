@@ -181,7 +181,7 @@ func TestOverridesReported(t *testing.T) {
 
 func TestWarnSortsBeforeInfoAndHasWarnings(t *testing.T) {
 	corpus := []fragment.Fragment{
-		frag("vague", "Do it as appropriate."),             // info
+		frag("vague", "Do it as appropriate."),              // info
 		frag("dated", "Shipped 2026-07-13, still pending."), // warn
 	}
 	fs := Run(corpus, Options{})
