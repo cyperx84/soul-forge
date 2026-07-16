@@ -79,9 +79,9 @@ func OpenClawRenderMap() RenderMap {
 
 // ClaudeGlobalRenderMap emits one sectioned file: ~/.claude/CLAUDE.md.
 //
-// No kind:voice. Chris's call, and it is a design position, not an omission: Claude
-// Code is a tool, and a tool gets no persona. A voice fragment reaching this target
-// is dropped at the map, not filtered upstream — the corpus stays harness-neutral.
+// No kind:voice, and it is a design position, not an omission: a coding harness is
+// a tool, and a tool gets no persona. A voice fragment reaching this target is
+// dropped at the map, not filtered upstream — the corpus stays harness-neutral.
 func ClaudeGlobalRenderMap() RenderMap {
 	const out = "CLAUDE.md"
 	return RenderMap{
@@ -94,5 +94,44 @@ func ClaudeGlobalRenderMap() RenderMap {
 		},
 		Order:   []string{out},
 		Headers: map[string]string{out: "CLAUDE.md"},
+	}
+}
+
+// HermesRenderMap emits one file: SOUL.md — doctrine and voice together.
+//
+// This is not the OpenClaw split relaxed by accident. Hermes has no home-level
+// AGENTS.md and cannot have one (its subdirectory hints scan only the working
+// tree, explicitly to prevent cross-agent context contamination), so SOUL.md is
+// the only authored slot the harness reads at home scope. "SOUL.md is voice only"
+// is an OpenClaw rule — a filename only means what the harness around it says it
+// means. USER.md is deliberately absent, skeleton included: Hermes' memory tool
+// writes it at runtime, and a compile target that named it would clobber real
+// memory (lifecycle:instance, invariant 3).
+func HermesRenderMap() RenderMap {
+	const out = "SOUL.md"
+	return RenderMap{
+		Name: "hermes",
+		Route: func(f fragment.Fragment, s fragment.Selector) (string, bool) {
+			return out, true
+		},
+		Order:   []string{out},
+		Headers: map[string]string{out: "SOUL.md"},
+	}
+}
+
+// CodexRenderMap emits one file: AGENTS.md. Same tool-not-character position as
+// the claude map: voice is dropped at the map.
+func CodexRenderMap() RenderMap {
+	const out = "AGENTS.md"
+	return RenderMap{
+		Name: "codex",
+		Route: func(f fragment.Fragment, s fragment.Selector) (string, bool) {
+			if f.Kind == fragment.KindVoice {
+				return "", false
+			}
+			return out, true
+		},
+		Order:   []string{out},
+		Headers: map[string]string{out: "AGENTS.md"},
 	}
 }

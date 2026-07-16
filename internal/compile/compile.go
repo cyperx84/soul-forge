@@ -134,6 +134,10 @@ func (t Target) renderMap() (RenderMap, error) {
 		return OpenClawRenderMap(), nil
 	case fragment.HarnessClaude:
 		return ClaudeGlobalRenderMap(), nil
+	case fragment.HarnessHermes:
+		return HermesRenderMap(), nil
+	case fragment.HarnessCodex:
+		return CodexRenderMap(), nil
 	default:
 		return RenderMap{}, fmt.Errorf("compile %s: no render map for harness %q; set Target.Render explicitly", t.Name, t.Selector.Harness)
 	}
