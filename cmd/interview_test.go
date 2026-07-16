@@ -10,8 +10,8 @@ import (
 	"github.com/cyperx84/soul-forge/internal/ingest"
 )
 
-// The brief is a template the run parameterizes. The contract: every name in the
-// output traces to a flag or an ingested file — the tool itself supplies none.
+// The brief is template + run parameters + questions, and the template must be
+// byte-identical for every user. These tests pin that boundary.
 
 const interviewFixture = `# FILE.md
 
@@ -39,39 +39,72 @@ func interviewBatches(t *testing.T, opts ingest.Options) ([]ingest.Proposal, []i
 	return ps, ingest.Batches(ps)
 }
 
-func TestInterviewBriefCarriesNoNamesOfItsOwn(t *testing.T) {
-	ps, batches := interviewBatches(t, ingest.Options{})
+func renderBrief(t *testing.T, host string, agents []string) string {
+	t.Helper()
+	opts := ingest.Options{Host: host, Agents: agents}
+	ps, batches := interviewBatches(t, opts)
 	var sb strings.Builder
-	if err := emitInterview(&sb, ps, batches, "", nil); err != nil {
+	if err := emitInterview(&sb, ps, batches, host, agents); err != nil {
 		t.Fatal(err)
 	}
-	out := sb.String()
+	return sb.String()
+}
 
-	// Names from the author's own setup must never appear when flags didn't
-	// supply them. This is the generalization contract, pinned.
-	for _, leaked := range []string{"klaw", "Klaw", "builder", "researcher", "ops", "Chris", "m4-mini", "CLAUDE.md", "hermes"} {
-		if strings.Contains(out, leaked) {
-			t.Errorf("brief leaked author-specific name %q with no flags set", leaked)
-		}
+// templatePart cuts the brief at the run-parameters boundary. Everything before
+// it is the template; everything after is this run's data.
+func templatePart(t *testing.T, brief string) string {
+	t.Helper()
+	idx := strings.Index(brief, "# Run parameters")
+	if idx < 0 {
+		t.Fatal("brief has no Run parameters block; the template/data boundary is gone")
 	}
-	if !strings.Contains(out, "roster was not supplied") {
-		t.Error("no-roster run must tell the interviewer to accept any agent name")
+	return brief[:idx]
+}
+
+func TestInterviewTemplateIsIdenticalAcrossRuns(t *testing.T) {
+	a := templatePart(t, renderBrief(t, "box-a", []string{"alpha", "beta"}))
+	b := templatePart(t, renderBrief(t, "other-machine", []string{"gamma"}))
+	c := templatePart(t, renderBrief(t, "", nil))
+
+	// The generalization contract: two users with different machines, rosters,
+	// and files get byte-identical interviewer instructions. Any interpolation
+	// of run data into the template breaks this test by construction.
+	if a != b || b != c {
+		t.Error("template bytes differ across runs — run data leaked into the template")
 	}
 }
 
-func TestInterviewBriefUsesRunParameters(t *testing.T) {
-	opts := ingest.Options{Host: "box-a", Agents: []string{"alpha", "beta"}}
-	ps, batches := interviewBatches(t, opts)
-	var sb strings.Builder
-	if err := emitInterview(&sb, ps, batches, opts.Host, opts.Agents); err != nil {
-		t.Fatal(err)
-	}
-	out := sb.String()
+func TestInterviewTemplateNamesNoValues(t *testing.T) {
+	tpl := templatePart(t, renderBrief(t, "box-a", []string{"alpha", "beta"}))
 
-	for _, want := range []string{"`box-a`", "`alpha`", "`beta`", "NEW_AGENT"} {
-		if !strings.Contains(out, want) {
-			t.Errorf("brief missing run parameter %q", want)
+	// Not even this run's own values may appear in the template prose — they
+	// belong in the Run parameters block, which the template points at.
+	for _, v := range []string{"box-a", "alpha", "beta"} {
+		if strings.Contains(tpl, v) {
+			t.Errorf("template prose contains run value %q; it must only reference Run parameters", v)
 		}
+	}
+}
+
+func TestInterviewRunParametersCarryTheRunData(t *testing.T) {
+	out := renderBrief(t, "box-a", []string{"alpha", "beta"})
+	params := out[strings.Index(out, "# Run parameters"):]
+
+	for _, want := range []string{"`box-a`", "`alpha`", "`beta`"} {
+		if !strings.Contains(params, want) {
+			t.Errorf("Run parameters missing %q", want)
+		}
+	}
+}
+
+func TestInterviewDefaultsWhenParametersAbsent(t *testing.T) {
+	out := renderBrief(t, "", nil)
+
+	if !strings.Contains(out, "Machine id:** not supplied") {
+		t.Error("absent host must tell the interviewer to ask the user for a machine name")
+	}
+	if !strings.Contains(out, "Agent roster:** not supplied") {
+		t.Error("absent roster must tell the interviewer to accept any agent name")
 	}
 }
 
