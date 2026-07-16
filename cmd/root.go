@@ -1,46 +1,36 @@
 package cmd
 
 import (
-	"errors"
 	"fmt"
 	"os"
 
-	"github.com/cyperx84/soul-forge/internal/config"
 	"github.com/spf13/cobra"
 )
 
+// Version is set by goreleaser ldflags at build time.
+var Version = "dev"
+
 var rootCmd = &cobra.Command{
 	Use:     "soul-forge",
-	Version: config.Version,
-	Short:   "Generate SOUL/USER/AGENTS/TOOLS/MEMORY files for agent fleets",
-	Long: `soul-forge generates the workspace files an agent fleet needs — SOUL.md (persona),
-IDENTITY.md, USER.md, AGENTS.md (operating procedure), TOOLS.md, and MEMORY.md — for
-OpenClaw, Hermes, or any harness that reads a soul.md.
+	Version: Version,
+	Short:   "Compile AI-agent instruction files from a tagged fragment corpus",
+	Long: `soul-forge stores every agent instruction as a fragment — one sentence, tagged
+with where it applies (host, profile, harness, lifecycle, kind) — and compiles
+per-agent, per-machine instruction files from them. A rule is written once and
+rendered everywhere it belongs, instead of hand-copied between files and drifting.
 
-It is a deterministic CLI and never calls an LLM provider. The onboarding interview is
-driven by your agent harness's own model via the bundled skill; soul-forge handles the
-structured parts — questionnaire, dotfiles extraction, generation, and auditing.`,
+Two ways in: 'ingest'/'review'/'merge' migrate existing instruction files into a
+corpus; 'onboard' authors one from scratch through a live voice interview. 'apply'
+writes compiled targets to disk, dry-run by default.
+
+It is a deterministic CLI and never calls an LLM. Interview briefs are prompts for
+whatever voice model the user talks to; the answers come back as text the CLI
+parses. The reasoning layer is swappable, the compiler is not.`,
 }
 
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		// errAuditFailed already printed its own output; just exit with code 1.
-		if errors.Is(err, errAuditFailed) {
-			os.Exit(1)
-		}
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-}
-
-func init() {
-	rootCmd.AddCommand(initCmd)
-	rootCmd.AddCommand(questionsCmd)
-	rootCmd.AddCommand(generateCmd)
-	rootCmd.AddCommand(dotfilesCmd)
-	rootCmd.AddCommand(voiceCmd)
-	rootCmd.AddCommand(importCmd)
-	rootCmd.AddCommand(auditCmd)
-	rootCmd.AddCommand(rubricCmd)
-	rootCmd.AddCommand(schemaCmd)
 }

@@ -1,7 +1,7 @@
 {
   "name": "soul-forge",
   "version": "0.0.0",
-  "description": "Generate SOUL/USER/AGENTS/TOOLS/MEMORY files for AI agent fleets — OpenClaw, Hermes, or any harness that reads a soul.md.",
+  "description": "Compile AI-agent instruction files from a tagged fragment corpus — write a rule once, render it per agent, per machine, per harness.",
   "bin": {
     "soul-forge": "bin/cli.js"
   },

@@ -11,7 +11,7 @@ builds:
       - amd64
       - arm64
     ldflags:
-      - -s -w -X github.com/cyperx84/soul-forge/internal/config.Version={{.Version}}
+      - -s -w -X github.com/cyperx84/soul-forge/cmd.Version={{.Version}}
 
 archives:
   - format: tar.gz
@@ -33,7 +33,7 @@ brews:
       name: homebrew-tap
       token: "{{ .Env.TAP_TOKEN }}"
     homepage: "https://github.com/cyperx84/soul-forge"
-    description: "Generate SOUL/USER/AGENTS/TOOLS/MEMORY files for AI agent fleets"
+    description: "Compile AI-agent instruction files from a tagged fragment corpus"
     license: "MIT"
     install: |
       bin.install "soul-forge"
