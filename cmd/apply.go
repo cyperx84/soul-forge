@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/cyperx84/soul-forge/internal/compile"
@@ -33,6 +34,10 @@ import (
 var (
 	applyCorpus   string
 	applyTarget   string
+	applyTargets  string
+	applyHost     string
+	applyProfile  string
+	applyHarness  string
 	applyRoot     string
 	applyCommit   bool
 	applyForce    bool
@@ -59,7 +64,11 @@ does not get to guess which it is.`,
 func init() {
 	rootCmd.AddCommand(applyCmd)
 	applyCmd.Flags().StringVar(&applyCorpus, "corpus", "", "path to a fragment corpus JSON file (required)")
-	applyCmd.Flags().StringVar(&applyTarget, "target", "", "target name: openclaw-hub or claude-global (required)")
+	applyCmd.Flags().StringVar(&applyTarget, "target", "", "target name to look up in --targets")
+	applyCmd.Flags().StringVar(&applyTargets, "targets", "", "path to a targets JSON file (array of {name, host, profile, harness})")
+	applyCmd.Flags().StringVar(&applyHost, "host", "", "machine id to compile for (ad-hoc target, with --profile and --harness)")
+	applyCmd.Flags().StringVar(&applyProfile, "profile", "", "agent id to compile for (ad-hoc target)")
+	applyCmd.Flags().StringVar(&applyHarness, "harness", "", "harness to compile for: openclaw, claude, hermes, or codex (ad-hoc target)")
 	applyCmd.Flags().StringVar(&applyRoot, "root", "", "directory to write into (required)")
 	applyCmd.Flags().BoolVar(&applyCommit, "commit", false, "actually write; without it this is a dry run")
 	applyCmd.Flags().BoolVar(&applyForce, "force", false, "permit overwriting files whose content differs")
@@ -67,7 +76,6 @@ func init() {
 	applyCmd.Flags().StringVar(&applyBackupTo, "backup-to", "", "backup directory; defaults to <root>/.soul-forge-backup/<timestamp>")
 	applyCmd.Flags().BoolVar(&applyJSON, "json", false, "emit the plan as JSON")
 	applyCmd.MarkFlagRequired("corpus")
-	applyCmd.MarkFlagRequired("target")
 	applyCmd.MarkFlagRequired("root")
 }
 
@@ -76,7 +84,7 @@ func runApply(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	target, err := namedTarget(applyTarget)
+	target, err := resolveTarget()
 	if err != nil {
 		return err
 	}
@@ -201,28 +209,69 @@ func loadCorpus(path string) ([]fragment.Fragment, error) {
 	return frags, nil
 }
 
-// namedTarget resolves a target name to its scope point and render map.
-//
-// Unknown names are an error listing the known ones. The alternative — defaulting to
-// openclaw-hub — would write a typo'd target's output into a real workspace.
-func namedTarget(name string) (compile.Target, error) {
-	switch name {
-	case "openclaw-hub":
+// targetDef is one entry in a --targets file. Targets are user data, not tool
+// constants: an earlier version baked its author's agent and machine into the
+// binary here, which is exactly the hardcoding this tool exists to kill.
+type targetDef struct {
+	Name    string `json:"name"`
+	Host    string `json:"host"`
+	Profile string `json:"profile"`
+	Harness string `json:"harness"`
+}
+
+// resolveTarget builds the compile target from flags: either an ad-hoc
+// (--host, --profile, --harness) triple, or --target looked up in --targets.
+func resolveTarget() (compile.Target, error) {
+	adHoc := applyHost != "" || applyProfile != "" || applyHarness != ""
+	named := applyTarget != "" || applyTargets != ""
+
+	switch {
+	case adHoc && named:
+		return compile.Target{}, fmt.Errorf("use either --host/--profile/--harness or --targets/--target, not both")
+	case adHoc:
+		if applyHost == "" || applyProfile == "" || applyHarness == "" {
+			return compile.Target{}, fmt.Errorf("an ad-hoc target needs all three of --host, --profile, --harness")
+		}
 		return compile.Target{
-			Name:     "openclaw-hub",
-			Selector: fragment.Selector{Host: applyHost(), Profile: "klaw", Harness: fragment.HarnessOpenClaw},
+			Name:     fmt.Sprintf("%s/%s/%s", applyHost, applyProfile, applyHarness),
+			Selector: fragment.Selector{Host: applyHost, Profile: applyProfile, Harness: applyHarness},
 		}, nil
-	case "claude-global":
-		return compile.Target{
-			Name:     "claude-global",
-			Selector: fragment.Selector{Host: applyHost(), Profile: fragment.AxisAny, Harness: fragment.HarnessClaude},
-		}, nil
+	case applyTarget != "" && applyTargets != "":
+		defs, err := loadTargets(applyTargets)
+		if err != nil {
+			return compile.Target{}, err
+		}
+		var known []string
+		for _, d := range defs {
+			if d.Name == applyTarget {
+				return compile.Target{
+					Name:     d.Name,
+					Selector: fragment.Selector{Host: d.Host, Profile: d.Profile, Harness: d.Harness},
+				}, nil
+			}
+			known = append(known, d.Name)
+		}
+		// Unknown names are an error listing the known ones. Defaulting to the first
+		// entry would write a typo'd target's output into a real workspace.
+		return compile.Target{}, fmt.Errorf("target %q not in %s (known: %s)", applyTarget, applyTargets, strings.Join(known, ", "))
 	default:
-		return compile.Target{}, fmt.Errorf("unknown target %q (known: openclaw-hub, claude-global)", name)
+		return compile.Target{}, fmt.Errorf("no target: pass --host/--profile/--harness, or --targets <file> with --target <name>")
 	}
 }
 
-// applyHost is a placeholder for the host id until profiles carry it. Kept as one
-// function so the eventual wiring has a single site, rather than a literal sprinkled
-// through target definitions.
-func applyHost() string { return "m4-mini" }
+func loadTargets(path string) ([]targetDef, error) {
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("targets: %w", err)
+	}
+	var defs []targetDef
+	if err := json.Unmarshal(b, &defs); err != nil {
+		return nil, fmt.Errorf("targets %s: %w", path, err)
+	}
+	for i, d := range defs {
+		if d.Name == "" || d.Host == "" || d.Profile == "" || d.Harness == "" {
+			return nil, fmt.Errorf("targets %s: entry %d: name, host, profile, and harness are all required", path, i)
+		}
+	}
+	return defs, nil
+}
